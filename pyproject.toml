@@ -1,0 +1,155 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [
+    "setuptools",
+    "setuptools-scm",
+]
+
+[project]
+authors = [
+    {email = "d.stansby@ucl.ac.uk", name = "HiP-CT Project"},
+]
+classifiers = [
+    "Operating System :: POSIX",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Typing :: Typed",
+]
+dependencies = [
+]
+description = "Convert stacks of images to chunked datasets"
+dynamic = [
+    "version",
+]
+keywords = [
+]
+name = "stack-to-chunk"
+optional-dependencies = {dev = [
+    "black",
+    "build",
+    "mypy",
+    "pre-commit",
+    "pytest",
+    "ruff",
+    "tox>=4",
+    "twine",
+]}
+readme = "README.md"
+requires-python = ">=3.11"
+license.file = "LICENCE.md"
+urls.homepage = "https://github.com/HiPCTProject/stack-to-chunk"
+
+[tool.coverage]
+report = {skip_covered = true, sort = "cover"}
+run = {branch = true, parallel = true, source = [
+    "stack-to-chunk",
+]}
+paths.source = [
+    "src",
+    ".tox*/*/lib/python*/site-packages",
+]
+
+[tool.mypy]
+explicit_package_bases = true
+plugins = [
+    "numpy.typing.mypy_plugin",
+    "pydantic.mypy",
+]
+
+[tool.pytest.ini_options]
+addopts = "--color=yes -v"
+testpaths = [
+    "tests",
+]
+
+[tool.ruff]
+fix = true
+force-exclude = true
+ignore = [
+    "D203", # no-blank-line-before-class
+    "D212", # multi-line-summary-first-line
+    "D417", # argument description in docstring (unreliable)
+]
+per-file-ignores = {"test_*" = [
+    "S101",
+]}
+select = [
+    "A",
+    "ARG",
+    "B",
+    "BLE",
+    "C",
+    "COM",
+    "D",
+    "DJ",
+    "DTZ",
+    "E",
+    "EM",
+    "ERA",
+    "EXE",
+    "F",
+    "FBT",
+    "I",
+    "ICN",
+    "ISC",
+    "N",
+    "NPY",
+    "PD",
+    "PGH",
+    "PIE",
+    "PL",
+    "PT",
+    "PTH",
+    "PYI",
+    "Q",
+    "RET",
+    "RSE",
+    "RUF",
+    "S",
+    "SIM",
+    "T",
+    "TCH",
+    "TID",
+    "UP",
+    "W",
+    "YTT",
+]
+target-version = "py311"
+isort.known-first-party = [
+    "stack_to_chunk",
+]
+mccabe.max-complexity = 18
+pep8-naming.classmethod-decorators = [
+    "classmethod",
+    "pydantic.validator",
+]
+
+[tool.setuptools_scm]
+local_scheme = "no-local-version"
+write_to = "src/stack-to-chunk/_version.py"
+
+[tool.tomlsort]
+all = true
+spaces_indent_inline_array = 4
+trailing_comma_inline_array = true
+overrides."project.classifiers".inline_arrays = false
+overrides."tool.coverage.paths.source".inline_arrays = false
+
+[tool.tox]
+legacy_tox_ini = """
+    [gh-actions]
+    python =
+        3.11: py311
+
+    [testenv]
+    commands =
+        pytest --cov --cov-report=xml
+    deps =
+        pytest
+        pytest-cov
+
+    [tox]
+    env_list =
+        py311
+"""
