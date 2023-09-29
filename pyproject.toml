@@ -24,7 +24,7 @@ dynamic = [
 ]
 keywords = [
 ]
-name = "stack-to-chunk"
+name = "stack_to_chunk"
 optional-dependencies = {dev = [
     "black",
     "build",
@@ -43,7 +43,7 @@ urls.homepage = "https://github.com/HiPCTProject/stack-to-chunk"
 [tool.coverage]
 report = {skip_covered = true, sort = "cover"}
 run = {branch = true, parallel = true, source = [
-    "stack-to-chunk",
+    "stack_to_chunk",
 ]}
 paths.source = [
     "src",
@@ -127,7 +127,7 @@ pep8-naming.classmethod-decorators = [
 
 [tool.setuptools_scm]
 local_scheme = "no-local-version"
-write_to = "src/stack-to-chunk/_version.py"
+write_to = "src/stack_to_chunk/_version.py"
 
 [tool.tomlsort]
 all = true
