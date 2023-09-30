@@ -24,7 +24,7 @@
 [licence-badge]:            https://img.shields.io/badge/License-BSD_3--Clause-blue.svg
 <!-- prettier-ignore-end -->
 
-Convert stacks of images to chunked datasets
+Convert stacks of images to a chunked zarr dataset that can be used for visualisation with [neuroglancer](https://github.com/google/neuroglancer).
 
 ## About
 
