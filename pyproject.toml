@@ -17,6 +17,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
+    "zarr==2.16.1",
 ]
 description = "Convert stacks of images to chunked datasets"
 dynamic = [
@@ -52,10 +53,11 @@ paths.source = [
 
 [tool.mypy]
 explicit_package_bases = true
+ignore_missing_imports = true
 plugins = [
     "numpy.typing.mypy_plugin",
-    "pydantic.mypy",
 ]
+strict = true
 
 [tool.pytest.ini_options]
 addopts = "--color=yes -v"
