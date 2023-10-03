@@ -1,6 +1,11 @@
 from pathlib import Path
+from typing import Any, Literal
 
+import dask
+import dask.array as da
+import dask.delayed
 import zarr
+from numcodecs.abc import Codec
 
 from stack_to_chunk.ome_ngff import SPATIAL_UNIT
 
@@ -13,6 +18,11 @@ Strategy:
 - Write out data to zarr array.
 - Successively downsample and write out data.
 - Parallelise the above across slabs.
+
+
+Assumes that:
+- It's expensive to read a single slice of original data into memory, and
+  the whole slice must be read in at once (both of these are true for JPEG2000)
 """
 
 
@@ -43,17 +53,17 @@ def create_group(
       Number of dowmsampling levels to include in the data.
     """
     root = zarr.open_group(store=path, mode="w")
-    multiscales = root.create_group("multiscales")
 
-    multiscales.attrs["version"] = "0.4"
-    multiscales.attrs["name"] = name
-    multiscales.attrs["axes"] = [
+    multiscales: dict[str, Any] = {}
+    multiscales["version"] = "0.4"
+    multiscales["name"] = name
+    multiscales["axes"] = [
         {"name": "z", "type": "space", "unit": spatial_unit},
         {"name": "y", "type": "space", "unit": spatial_unit},
         {"name": "x", "type": "space", "unit": spatial_unit},
     ]
-    multiscales.attrs["type"] = "linear"
-    multiscales.attrs["metadata"] = {
+    multiscales["type"] = "linear"
+    multiscales["metadata"] = {
         "description": "Downscaled using linear resampling",
     }
 
@@ -67,4 +77,59 @@ def create_group(
                 ],
             },
         )
-    multiscales.attrs["datasets"] = datasets
+    multiscales["datasets"] = datasets
+    root.attrs["multiscales"] = multiscales
+
+    return root
+
+
+def setup_copy_to_zarr(
+    arr: da.Array,
+    group: zarr.Group,
+    *,
+    chunk_size: int = 64,
+    compressor: Literal["default"] | Codec = "default",
+):
+    """
+    Copy a 3D Dask array that is sliced (ie. has chunks of shape (nx, ny, 1))
+    to a zarr array on disk that has isometric chunks (ie. shape (n, n, n)).
+
+    Parameters
+    ----------
+    arr :
+        Dask array to copy to zarr.
+    group :
+        zarr Group already set up for writing multiscale data with `create_group()`.
+        The array is written to an array named "0" within the group.
+    chunk_size :
+        (isometric) chunk size to use for zarr chunking.
+    compressor :
+        Compressor to use to compress the zarr data.
+    """
+    assert arr.ndim == 3, "Input array is not 3-dimensional"
+    assert arr.chunksize[2] == 1, "Input array is not chunked in slices"
+
+    print("Setting up copy to zarr...")
+    slice_size_bytes = arr.nbytes // arr.size * arr.chunksize[0] * arr.chunksize[1]
+    slab_size_bytes = slice_size_bytes * chunk_size
+    print(f"Each dask task will read ~{slab_size_bytes / 1e6:.02f} MB into memory")
+
+    group["0"] = zarr.create(
+        arr.shape, chunks=chunk_size, dtype=arr.dtype, compressor=compressor
+    )
+
+    @dask.delayed
+    def copy_slab(slab: da.Array, zstart: int, zend: int) -> None:
+        # Read in data
+        data_in = slab.persist()
+        # Write out data
+        group["0"][:, :, zstart:zend] = data_in
+
+    jobs = []
+    nz = arr.shape[2]
+    for z in range(0, nz, chunk_size):
+        zmin = z
+        zmax = min(z + chunk_size, nz)
+        jobs.append(copy_slab(arr[:, :, zmin:zmax], zmin, zmax))
+
+    return dask.delayed(jobs)

@@ -161,5 +161,9 @@ cython_debug/
 
 src/stack_to_chunk/_version.py
 
-
 *.zarr
+
+*.DS_Store
+
+*.html
+*.svg
