@@ -1,3 +1,1 @@
-"""
-Convert stacks of images to chunked datasets.
-"""
+"""Convert stacks of images to chunked datasets."""

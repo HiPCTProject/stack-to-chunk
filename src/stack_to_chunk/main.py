@@ -115,7 +115,10 @@ def setup_copy_to_zarr(
     print(f"Each dask task will read ~{slab_size_bytes / 1e6:.02f} MB into memory")
 
     group["0"] = zarr.create(
-        arr.shape, chunks=chunk_size, dtype=arr.dtype, compressor=compressor
+        arr.shape,
+        chunks=chunk_size,
+        dtype=arr.dtype,
+        compressor=compressor,
     )
 
     @dask.delayed
