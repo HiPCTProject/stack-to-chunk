@@ -26,19 +26,19 @@
 
 Convert stacks of images to a chunked zarr dataset that can be used for visualisation with [neuroglancer](https://github.com/google/neuroglancer).
 
-## About
+Specifically this code is written to:
+- Take stacks of 2D images (e.g., TIFF, JPEG files) that represent a 3D spatial volume as input.
+- Convert them to an [OME Next Generation File Format (NGFF)](https://ngff.openmicroscopy.org/0.4/index.html) zarr dataset suitable for multiscale viewing with [neuroglancer](https://github.com/google/neuroglancer).
 
-### Project Team
+## Internals
+The code is designed based on the following assumptions:
 
-HiP-CT Project ([d.stansby@ucl.ac.uk](mailto:d.stansby@ucl.ac.uk))
+1. Input data are stored in individual 2D slices. Reading part of a single slice requires reading the whole slice into memory, and this is an expensive operation.
+1. Writing a single chunk of output data is an expensive operation.
+1. Reading a single chunk of output data is a cheap operation.
 
-## Getting Started
+If we have input slices of shape `(nx, ny)`, and an output chunk shape of `(nc, nc, nc)` it makes sense to split the conversion into individual 'slabs' that have shape `(nx, ny, nc)`. This means there is a one-to-one mapping from slices to slabs, and slabs to chunks, allowing each slab to be processed in parallel without interfering with the other slabs.
 
-### Prerequisites
-
-<!-- Any tools or versions of languages needed to run code. For example specific Python or Node versions. Minimum hardware requirements also go here. -->
-
-`stack-to-chunk` requires Python 3.11.
 
 ### Installation
 
@@ -84,5 +84,3 @@ pytest tests
 ```
 
 again from the root of the repository.
-
-## Acknowledgements
