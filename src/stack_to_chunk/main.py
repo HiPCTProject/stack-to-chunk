@@ -16,12 +16,14 @@ Assumes that:
   the whole slice must be read in at once (both of these are true for JPEG2000)
 """
 
+from multiprocessing import Pool
 from pathlib import Path
+import numpy as np
 from typing import Any, Literal
 
 import dask.array as da
 import zarr
-from dask.delayed import Delayed, delayed
+from dask.delayed import Delayed
 from numcodecs.abc import Codec
 
 from stack_to_chunk.ome_ngff import SPATIAL_UNIT
@@ -84,6 +86,14 @@ def create_group(
     return root
 
 
+def copy_slab(arr_zarr: zarr.Array, slab: da.Array, zstart: int, zend: int) -> None:  # type: ignore[name-defined]
+    print(f"Copying z={zstart} -> {zend}")
+    # Read in data
+    data_in = np.array(slab)
+    # Write out data
+    arr_zarr[:, :, zstart:zend] = data_in
+
+
 def setup_copy_to_zarr(
     arr: da.Array,  # type: ignore[name-defined]
     group: zarr.Group,
@@ -124,18 +134,14 @@ def setup_copy_to_zarr(
         compressor=compressor,
     )
 
-    @delayed  # type: ignore[misc]
-    def copy_slab(slab: da.Array, zstart: int, zend: int) -> None:  # type: ignore[name-defined]
-        # Read in data
-        data_in = slab.persist()
-        # Write out data
-        group["0"][:, :, zstart:zend] = data_in
-
-    jobs = []
     nz = arr.shape[2]
-    for z in range(0, nz, chunk_size):
-        zmin = z
-        zmax = min(z + chunk_size, nz)
-        jobs.append(copy_slab(arr[:, :, zmin:zmax], zmin, zmax))
+    slab_idxs: list[tuple[int, int]] = [
+        (z, min(z + chunk_size, nz)) for z in range(0, nz, chunk_size)
+    ]
+    args = [
+        (group["0"], arr[:, :, zmin:zmax], zmin, zmax) for (zmin, zmax) in slab_idxs
+    ]
 
-    return delayed(jobs)  # type: ignore[no-any-return]
+    print("Starting initial copy to zarr...")
+    with Pool(2) as p:
+        p.starmap(copy_slab, args)
