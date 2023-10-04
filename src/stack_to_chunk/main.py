@@ -1,15 +1,6 @@
-from pathlib import Path
-from typing import Any, Literal
-
-import dask
-import dask.array as da
-import dask.delayed
-import zarr
-from numcodecs.abc import Codec
-
-from stack_to_chunk.ome_ngff import SPATIAL_UNIT
-
 """
+Main code for converting stacks to chunks.
+
 Strategy:
 
 - Divide data up into slabs of size 128.
@@ -24,6 +15,16 @@ Assumes that:
 - It's expensive to read a single slice of original data into memory, and
   the whole slice must be read in at once (both of these are true for JPEG2000)
 """
+
+from pathlib import Path
+from typing import Any, Literal
+
+import dask.array as da
+import zarr
+from dask.delayed import Delayed, delayed
+from numcodecs.abc import Codec
+
+from stack_to_chunk.ome_ngff import SPATIAL_UNIT
 
 
 def create_group(
@@ -84,13 +85,15 @@ def create_group(
 
 
 def setup_copy_to_zarr(
-    arr: da.Array,
+    arr: da.Array,  # type: ignore[name-defined]
     group: zarr.Group,
     *,
     chunk_size: int = 64,
     compressor: Literal["default"] | Codec = "default",
-):
+) -> Delayed:
     """
+    Setup copy from stacks to zarr array.
+
     Copy a 3D Dask array that is sliced (ie. has chunks of shape (nx, ny, 1))
     to a zarr array on disk that has isometric chunks (ie. shape (n, n, n)).
 
@@ -121,8 +124,8 @@ def setup_copy_to_zarr(
         compressor=compressor,
     )
 
-    @dask.delayed
-    def copy_slab(slab: da.Array, zstart: int, zend: int) -> None:
+    @delayed  # type: ignore[misc]
+    def copy_slab(slab: da.Array, zstart: int, zend: int) -> None:  # type: ignore[name-defined]
         # Read in data
         data_in = slab.persist()
         # Write out data
@@ -135,4 +138,4 @@ def setup_copy_to_zarr(
         zmax = min(z + chunk_size, nz)
         jobs.append(copy_slab(arr[:, :, zmin:zmax], zmin, zmax))
 
-    return dask.delayed(jobs)
+    return delayed(jobs)  # type: ignore[no-any-return]

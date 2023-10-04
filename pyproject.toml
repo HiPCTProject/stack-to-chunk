@@ -59,6 +59,12 @@ plugins = [
 ]
 strict = true
 
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = [
+    "dask",
+]
+
 [tool.pytest.ini_options]
 addopts = "--color=yes -v"
 testpaths = [
@@ -71,7 +77,11 @@ force-exclude = true
 ignore = [
     "D203", # no-blank-line-before-class
     "D212", # multi-line-summary-first-line
+    "D401", # imperitave mood
     "D417", # argument description in docstring (unreliable)
+    "PLR2004", # no 'magic values'
+    "S101", # no assert statements
+    "T201", # no print statements
 ]
 per-file-ignores = {"test_*" = [
     "S101",
