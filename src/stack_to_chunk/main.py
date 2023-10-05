@@ -15,15 +15,14 @@ Assumes that:
 - It's expensive to read a single slice of original data into memory, and
   the whole slice must be read in at once (both of these are true for JPEG2000)
 """
-
 from multiprocessing import Pool
 from pathlib import Path
-import numpy as np
 from typing import Any, Literal
 
 import dask.array as da
+import numpy as np
 import zarr
-from dask.delayed import Delayed
+from numcodecs import blosc
 from numcodecs.abc import Codec
 
 from stack_to_chunk.ome_ngff import SPATIAL_UNIT
@@ -88,19 +87,18 @@ def create_group(
 
 def copy_slab(arr_zarr: zarr.Array, slab: da.Array, zstart: int, zend: int) -> None:  # type: ignore[name-defined]
     print(f"Copying z={zstart} -> {zend}")
-    # Read in data
-    data_in = np.array(slab)
     # Write out data
-    arr_zarr[:, :, zstart:zend] = data_in
+    arr_zarr[:, :, zstart:zend] = np.array(slab)
 
 
-def setup_copy_to_zarr(
+def copy_to_zarr(
     arr: da.Array,  # type: ignore[name-defined]
     group: zarr.Group,
     *,
-    chunk_size: int = 64,
-    compressor: Literal["default"] | Codec = "default",
-) -> Delayed:
+    n_processes: int,
+    chunk_size: int,
+    compressor: Literal["default"] | Codec,
+) -> None:
     """
     Setup copy from stacks to zarr array.
 
@@ -114,6 +112,8 @@ def setup_copy_to_zarr(
     group :
         zarr Group already set up for writing multiscale data with `create_group()`.
         The array is written to an array named "0" within the group.
+    n_processes :
+        Number of parallel processes to use to copy data.
     chunk_size :
         (isometric) chunk size to use for zarr chunking.
     compressor :
@@ -143,5 +143,6 @@ def setup_copy_to_zarr(
     ]
 
     print("Starting initial copy to zarr...")
-    with Pool(2) as p:
+    blosc.use_threads = False
+    with Pool(n_processes) as p:
         p.starmap(copy_slab, args)
