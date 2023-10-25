@@ -54,7 +54,9 @@ def create_group(
     n_downsample_levels :
       Number of dowmsampling levels to include in the data.
     """
-    root = zarr.open_group(store=path, mode="w")
+    if path.exists():
+        raise FileExistsError(f"{path} already exists")
+    group = zarr.open_group(store=path, mode="w")
 
     multiscales: dict[str, Any] = {}
     multiscales["version"] = "0.4"
@@ -80,9 +82,9 @@ def create_group(
             },
         )
     multiscales["datasets"] = datasets
-    root.attrs["multiscales"] = multiscales
+    group.attrs["multiscales"] = multiscales
 
-    return root
+    return group
 
 
 def copy_slab(arr_zarr: zarr.Array, slab: da.Array, zstart: int, zend: int) -> None:
@@ -112,7 +114,7 @@ def copy_to_zarr(
     compressor: Literal["default"] | Codec,
 ) -> None:
     """
-    Setup copy from stacks to zarr array.
+    Copy from stacks to zarr array.
 
     Copy a 3D Dask array that is sliced (ie. has chunks of shape (nx, ny, 1))
     to a zarr array on disk that has isometric chunks (ie. shape (n, n, n)).
@@ -133,6 +135,8 @@ def copy_to_zarr(
     """
     assert arr.ndim == 3, "Input array is not 3-dimensional"
     assert arr.chunksize[2] == 1, "Input array is not chunked in slices"
+    if "0" in group:
+        raise RuntimeError("Level 0 already in zarr group")
 
     print("Setting up copy to zarr...")
     slice_size_bytes = arr.nbytes // arr.size * arr.chunksize[0] * arr.chunksize[1]
@@ -158,3 +162,31 @@ def copy_to_zarr(
     blosc.use_threads = False
     with Pool(n_processes) as p:
         p.starmap(copy_slab, args)
+
+
+def downsample_group(group: zarr.Group, *, level: int) -> None:
+    """
+    Parameters
+    ----------
+    path :
+        Path to zarr group store.
+    level : int
+        Level of downsampling to do.
+        A level of `i` corresponds to binning by a factor of `2**i`.
+    """
+    full_res_data = group["0"]
+
+    if not level >= 1 and int(level) == level:
+        raise ValueError("level must be an integer >= 1")
+
+    level_str = str(int(level))
+    if level_str in group:
+        raise RuntimeError(f"Level {level_str} already found in zarr group")
+
+    new_shape = np.array(full_res_data.shape) // 2
+    group[level_str] = zarr.create(
+        new_shape,
+        chunks=full_res_data.chunks,
+        dtype=full_res_data.dtype,
+        compressor=full_res_data.compressor,
+    )
