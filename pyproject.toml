@@ -63,7 +63,7 @@ strict = true
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = [
-    "dask",
+    "dask.*",
 ]
 
 [tool.pytest.ini_options]

@@ -108,7 +108,7 @@ def _copy_slab(arr_zarr: zarr.Array, slab: da.Array, zstart: int, zend: int) -> 
 
 
 def copy_to_zarr(
-    arr: da.Array,  # type: ignore[name-defined]
+    arr: da.Array,
     group: zarr.Group,
     *,
     n_processes: int,
