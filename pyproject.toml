@@ -17,7 +17,8 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "zarr==2.16.1",
+    "dask",
+    "zarr",
 ]
 description = "Convert stacks of images to chunked datasets"
 dynamic = [
