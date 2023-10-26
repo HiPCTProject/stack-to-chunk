@@ -67,9 +67,6 @@ module = [
 
 [tool.pytest.ini_options]
 addopts = "--color=yes -v"
-testpaths = [
-    "tests",
-]
 
 [tool.ruff]
 fix = true

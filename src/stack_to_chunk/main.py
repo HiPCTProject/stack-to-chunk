@@ -10,7 +10,6 @@ Strategy:
 - Successively downsample and write out data.
 - Parallelise the above across slabs.
 
-
 Assumes that:
 - It's expensive to read a single slice of original data into memory, and
   the whole slice must be read in at once (both of these are true for JPEG2000)
@@ -26,6 +25,8 @@ from numcodecs import blosc
 from numcodecs.abc import Codec
 
 from stack_to_chunk.ome_ngff import SPATIAL_UNIT
+
+__all__ = ["create_group", "copy_to_zarr"]
 
 
 def create_group(
@@ -55,7 +56,8 @@ def create_group(
       Number of dowmsampling levels to include in the data.
     """
     if path.exists():
-        raise FileExistsError(f"{path} already exists")
+        msg = f"{path} already exists"
+        raise FileExistsError(msg)
     group = zarr.open_group(store=path, mode="w")
 
     multiscales: dict[str, Any] = {}
@@ -87,7 +89,7 @@ def create_group(
     return group
 
 
-def copy_slab(arr_zarr: zarr.Array, slab: da.Array, zstart: int, zend: int) -> None:
+def _copy_slab(arr_zarr: zarr.Array, slab: da.Array, zstart: int, zend: int) -> None:
     """
     Copy a single slab of data to a zarr array.
 
@@ -136,7 +138,8 @@ def copy_to_zarr(
     assert arr.ndim == 3, "Input array is not 3-dimensional"
     assert arr.chunksize[2] == 1, "Input array is not chunked in slices"
     if "0" in group:
-        raise RuntimeError("Level 0 already in zarr group")
+        msg = "Level 0 already in zarr group"
+        raise RuntimeError(msg)
 
     print("Setting up copy to zarr...")
     slice_size_bytes = arr.nbytes // arr.size * arr.chunksize[0] * arr.chunksize[1]
@@ -161,11 +164,13 @@ def copy_to_zarr(
     print("Starting initial copy to zarr...")
     blosc.use_threads = False
     with Pool(n_processes) as p:
-        p.starmap(copy_slab, args)
+        p.starmap(_copy_slab, args)
 
 
 def downsample_group(group: zarr.Group, *, level: int) -> None:
     """
+    Downsample a group.
+
     Parameters
     ----------
     path :
@@ -177,11 +182,13 @@ def downsample_group(group: zarr.Group, *, level: int) -> None:
     full_res_data = group["0"]
 
     if not level >= 1 and int(level) == level:
-        raise ValueError("level must be an integer >= 1")
+        msg = "level must be an integer >= 1"
+        raise ValueError(msg)
 
     level_str = str(int(level))
     if level_str in group:
-        raise RuntimeError(f"Level {level_str} already found in zarr group")
+        msg = f"Level {level_str} already found in zarr group"
+        raise RuntimeError(msg)
 
     new_shape = np.array(full_res_data.shape) // 2
     group[level_str] = zarr.create(
