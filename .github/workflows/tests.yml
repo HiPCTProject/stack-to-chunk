@@ -38,3 +38,6 @@ jobs:
 
       - name: Test with tox
         run: tox
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3

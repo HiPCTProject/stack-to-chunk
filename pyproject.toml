@@ -145,21 +145,3 @@ spaces_indent_inline_array = 4
 trailing_comma_inline_array = true
 overrides."project.classifiers".inline_arrays = false
 overrides."tool.coverage.paths.source".inline_arrays = false
-
-[tool.tox]
-legacy_tox_ini = """
-    [gh-actions]
-    python =
-        3.11: py311
-
-    [testenv]
-    commands =
-        pytest --cov --cov-report=xml
-    deps =
-        pytest
-        pytest-cov
-
-    [tox]
-    env_list =
-        py311
-"""
