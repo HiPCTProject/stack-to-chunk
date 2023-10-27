@@ -24,147 +24,108 @@ import zarr
 from numcodecs import blosc
 from numcodecs.abc import Codec
 
+from stack_to_chunk._array_helpers import _copy_slab
 from stack_to_chunk.ome_ngff import SPATIAL_UNIT
 
-__all__ = ["create_group", "copy_to_zarr"]
+__all__ = ["MultiScaleGroup"]
 
 
-def create_group(
-    path: Path,
-    *,
-    name: str,
-    spatial_unit: SPATIAL_UNIT,
-    voxel_sizes: tuple[float, float, float],
-    n_downsample_levels: int,
-) -> zarr.Group:
-    """
-    Create a zarr group suitable for storing multiscale data.
+class MultiScaleGroup:
+    """A class for creating and interacting with a OME-zarr multi-scale group."""
 
-    This is specialised to work with 3D spatial data.
+    def __init__(
+        self,
+        path: Path,
+        *,
+        name: str,
+        spatial_unit: SPATIAL_UNIT,
+        voxel_sizes: tuple[float, float, float],
+    ):
+        if path.exists():
+            msg = f"{path} already exists"
+            raise FileExistsError(msg)
+        self._path = path
+        self._name = name
+        self._spatial_unit = spatial_unit
+        self._voxel_sizes = voxel_sizes
 
-    Parameters
-    ----------
-    path :
-      Directory to create group under on local filesystem.
-    name :
-      Name of dataset.
-    spatial_unit :
-      Spatial unit for the dataset.
-    voxel_sizes :
-      Voxel sizes (in units of spatial unit).
-    n_downsample_levels :
-      Number of dowmsampling levels to include in the data.
-    """
-    if path.exists():
-        msg = f"{path} already exists"
-        raise FileExistsError(msg)
-    group = zarr.open_group(store=path, mode="w")
+        self._create_zarr_group()
 
-    multiscales: dict[str, Any] = {}
-    multiscales["version"] = "0.4"
-    multiscales["name"] = name
-    multiscales["axes"] = [
-        {"name": "z", "type": "space", "unit": spatial_unit},
-        {"name": "y", "type": "space", "unit": spatial_unit},
-        {"name": "x", "type": "space", "unit": spatial_unit},
-    ]
-    multiscales["type"] = "linear"
-    multiscales["metadata"] = {
-        "description": "Downscaled using linear resampling",
-    }
+    def _create_zarr_group(self) -> None:
+        """
+        Create the zarr group.
 
-    datasets = []
-    for level in range(n_downsample_levels + 1):
-        datasets.append(
-            {
-                "path": str(level),
-                "coordinateTransformations": [
-                    {"type": "scale", "scale": [vs / 2**level for vs in voxel_sizes]},
-                ],
-            },
+        Saves a reference to the group on the ._group attribute.
+        """
+        self._group = zarr.open_group(store=self._path, mode="w")
+        multiscales: dict[str, Any] = {}
+        multiscales["version"] = "0.4"
+        multiscales["name"] = self._name
+        multiscales["axes"] = [
+            {"name": "z", "type": "space", "unit": self._spatial_unit},
+            {"name": "y", "type": "space", "unit": self._spatial_unit},
+            {"name": "x", "type": "space", "unit": self._spatial_unit},
+        ]
+        multiscales["type"] = "linear"
+        multiscales["metadata"] = {
+            "description": "Downscaled using linear resampling",
+        }
+
+        multiscales["datasets"] = []
+        self._group.attrs["multiscales"] = multiscales
+
+    def add_full_res_data(
+        self,
+        data: da.Array,
+        *,
+        chunk_size: int,
+        compressor: Literal["default"] | Codec,
+        n_processes: int,
+    ) -> None:
+        """
+        Add the 'original' full resolution data to this group.
+
+        Raises
+        ------
+        RuntimeError :
+            If full resolution data have already been added.
+        """
+        if "0" in self._group:
+            msg = "Full resolution data already added to this zarr group."
+            raise RuntimeError(msg)
+
+        assert data.ndim == 3, "Input array is not 3-dimensional"
+        assert data.chunksize[2] == 1, "Input array is not chunked in slices"
+
+        print("Setting up copy to zarr...")
+        slice_size_bytes = (
+            data.nbytes // data.size * data.chunksize[0] * data.chunksize[1]
         )
-    multiscales["datasets"] = datasets
-    group.attrs["multiscales"] = multiscales
+        slab_size_bytes = slice_size_bytes * chunk_size
+        print(f"Each dask task will read ~{slab_size_bytes / 1e6:.02f} MB into memory")
 
-    return group
+        self._group["0"] = zarr.create(
+            data.shape,
+            chunks=chunk_size,
+            dtype=data.dtype,
+            compressor=compressor,
+        )
 
+        nz = data.shape[2]
+        slab_idxs: list[tuple[int, int]] = [
+            (z, min(z + chunk_size, nz)) for z in range(0, nz, chunk_size)
+        ]
+        args = [
+            (self._group["0"], data[:, :, zmin:zmax], zmin, zmax)
+            for (zmin, zmax) in slab_idxs
+        ]
 
-def _copy_slab(arr_zarr: zarr.Array, slab: da.Array, zstart: int, zend: int) -> None:
-    """
-    Copy a single slab of data to a zarr array.
+        print("Starting full resolution copy to zarr...")
+        blosc.use_threads = False
+        with Pool(n_processes) as p:
+            p.starmap(_copy_slab, args)
 
-    Parameters
-    ----------
-    arr_zarr :
-        Array to copy to.
-    slab :
-        Slab of data to copy.
-    zstart, zend :
-        Start and end indices to copy to in destination array.
-    """
-    print(f"Copying z={zstart} -> {zend}")
-    # Write out data
-    arr_zarr[:, :, zstart:zend] = np.array(slab)
-
-
-def copy_to_zarr(
-    arr: da.Array,
-    group: zarr.Group,
-    *,
-    n_processes: int,
-    chunk_size: int,
-    compressor: Literal["default"] | Codec,
-) -> None:
-    """
-    Copy from stacks to zarr array.
-
-    Copy a 3D Dask array that is sliced (ie. has chunks of shape (nx, ny, 1))
-    to a zarr array on disk that has isometric chunks (ie. shape (n, n, n)).
-
-    Parameters
-    ----------
-    arr :
-        Dask array to copy to zarr.
-    group :
-        zarr Group already set up for writing multiscale data with `create_group()`.
-        The array is written to an array named "0" within the group.
-    n_processes :
-        Number of parallel processes to use to copy data.
-    chunk_size :
-        (isometric) chunk size to use for zarr chunking.
-    compressor :
-        Compressor to use to compress the zarr data.
-    """
-    assert arr.ndim == 3, "Input array is not 3-dimensional"
-    assert arr.chunksize[2] == 1, "Input array is not chunked in slices"
-    if "0" in group:
-        msg = "Level 0 already in zarr group"
-        raise RuntimeError(msg)
-
-    print("Setting up copy to zarr...")
-    slice_size_bytes = arr.nbytes // arr.size * arr.chunksize[0] * arr.chunksize[1]
-    slab_size_bytes = slice_size_bytes * chunk_size
-    print(f"Each dask task will read ~{slab_size_bytes / 1e6:.02f} MB into memory")
-
-    group["0"] = zarr.create(
-        arr.shape,
-        chunks=chunk_size,
-        dtype=arr.dtype,
-        compressor=compressor,
-    )
-
-    nz = arr.shape[2]
-    slab_idxs: list[tuple[int, int]] = [
-        (z, min(z + chunk_size, nz)) for z in range(0, nz, chunk_size)
-    ]
-    args = [
-        (group["0"], arr[:, :, zmin:zmax], zmin, zmax) for (zmin, zmax) in slab_idxs
-    ]
-
-    print("Starting initial copy to zarr...")
-    blosc.use_threads = False
-    with Pool(n_processes) as p:
-        p.starmap(_copy_slab, args)
+        print("Finished full resolution copy to zarr.")
 
 
 def downsample_group(group: zarr.Group, *, level: int) -> None:
