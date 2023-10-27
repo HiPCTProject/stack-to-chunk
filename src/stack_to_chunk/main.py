@@ -75,6 +75,16 @@ class MultiScaleGroup:
         multiscales["datasets"] = []
         self._group.attrs["multiscales"] = multiscales
 
+    @property
+    def levels(self) -> list[int]:
+        """
+        List of downsample levels currently stored.
+
+        Level 0 corresponds to full resolution data, and level `i` to
+        data downsampled by a factor of `2**i`.
+        """
+        return [int(k) for k in self._group]
+
     def add_full_res_data(
         self,
         data: da.Array,
