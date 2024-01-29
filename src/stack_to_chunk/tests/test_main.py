@@ -1,4 +1,5 @@
 """Main functionality tests."""
+
 from pathlib import Path
 
 import dask.array as da

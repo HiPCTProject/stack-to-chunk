@@ -1,4 +1,5 @@
 """Quick test script."""
+
 from pathlib import Path
 
 import dask.array as da
