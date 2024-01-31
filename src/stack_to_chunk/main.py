@@ -14,6 +14,7 @@ Assumes that:
 - It's expensive to read a single slice of original data into memory, and
   the whole slice must be read in at once (both of these are true for JPEG2000)
 """
+
 from multiprocessing import Pool
 from pathlib import Path
 from typing import Any, Literal
