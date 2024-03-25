@@ -15,6 +15,7 @@ def _copy_slab(arr_zarr: zarr.Array, slab: da.Array, zstart: int, zend: int) -> 
         Slab of data to copy.
     zstart, zend :
         Start and end indices to copy to in destination array.
+
     """
     print(f"Copying z={zstart} -> {zend}")
     # Write out data
