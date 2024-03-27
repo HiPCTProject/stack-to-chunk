@@ -21,8 +21,16 @@ default_role = "any"
 nitpicky = True
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 extensions = [
+    "sphinx.ext.autodoc",
+    "sphinx.ext.intersphinx",
     "sphinx_gallery.gen_gallery",
 ]
+
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "numcodecs": ("https://numcodecs.readthedocs.io/en/stable/", None),
+    "dask": ("https://docs.dask.org/en/stable/", None),
+}
 sphinx_gallery_conf = {
     "examples_dirs": "tutorial",  # path to your example scripts
     "gallery_dirs": "auto_examples",  # path to where to save gallery generated output
