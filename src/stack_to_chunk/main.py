@@ -90,6 +90,7 @@ class MultiScaleGroup:
         ------
         RuntimeError :
             If full resolution data have already been added.
+
         """
         if "0" in self._group:
             msg = "Full resolution data already added to this zarr group."
@@ -140,6 +141,7 @@ def downsample_group(group: zarr.Group, *, level: int) -> None:
     level : int
         Level of downsampling to do.
         A level of `i` corresponds to binning by a factor of `2**i`.
+
     """
     full_res_data = group["0"]
 
