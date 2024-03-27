@@ -10,7 +10,7 @@ stack-to-chunk
 Convert stacks of images to a chunked zarr dataset. Specifically this code is written to:
 
 - Take stacks of 2D images (e.g., TIFF, JPEG files) that represent a 3D spatial volume as input.
-- Convert them to an `OME Next Generation File Format (NGFF) <https://ngff.openmicroscopy.org/0.4/index.html>`_ zarr dataset suitable for multiscale viewing with `neuroglancer <https://github.com/google/neuroglancer>`_.
+- Convert them to an `OME Next Generation File Format (NGFF) <https://ngff.openmicroscopy.org/0.4/index.html>`_ zarr dataset.
 
 Internals
 ---------
