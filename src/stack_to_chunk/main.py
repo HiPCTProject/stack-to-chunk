@@ -156,7 +156,7 @@ class MultiScaleGroup:
 
         if (level_minus_one := str(int(level) - 1)) not in self._group:
             raise RuntimeError(
-                f"Level below (level={level_minus_one}) not present in group."
+                f"Level below (level={level_minus_one}) not present in group.",
             )
 
         source_data = self._group[level_minus_one]
