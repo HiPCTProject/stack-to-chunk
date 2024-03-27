@@ -34,9 +34,13 @@ optional-dependencies = {dev = [
     "tox>=4",
     "twine",
 ], docs = [
+    "dask-image",
+    "matplotlib",
     "pydata-sphinx-theme",
+    "scikit-image",
     "sphinx",
     "sphinx-gallery",
+    "tifffile",
 ]}
 readme = "README.md"
 requires-python = ">=3.11"
