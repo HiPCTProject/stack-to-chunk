@@ -15,7 +15,7 @@ def test_workflow(tmp_path: Path) -> None:
         tmp_path / "group.zarr",
         name="my_zarr_group",
         spatial_unit="centimeter",
-        voxel_sizes=(3, 4, 5),
+        voxel_size=(3, 4, 5),
     )
 
     assert (tmp_path / "group.zarr").exists()
