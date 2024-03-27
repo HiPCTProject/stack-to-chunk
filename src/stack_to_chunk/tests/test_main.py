@@ -40,3 +40,6 @@ def test_workflow(tmp_path: Path) -> None:
 
     # Check that data is equal in dask array and zarr array
     np.testing.assert_equal(arr[:], zarr_arr[:])
+
+    group.add_downsample_level(1)
+    assert group.levels == [0, 1]
