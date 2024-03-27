@@ -1,18 +1,5 @@
 """
 Main code for converting stacks to chunks.
-
-Strategy:
-
-- Divide data up into slabs of size 128.
-- For each slab read data into memory.
-  This requires 128 * nx * ny * 2 bytes of memory per slab.
-- Write out data to zarr array.
-- Successively downsample and write out data.
-- Parallelise the above across slabs.
-
-Assumes that:
-- It's expensive to read a single slice of original data into memory, and
-  the whole slice must be read in at once (both of these are true for JPEG2000)
 """
 
 from multiprocessing import Pool
@@ -28,19 +15,31 @@ from numcodecs.abc import Codec
 from stack_to_chunk._array_helpers import _copy_slab
 from stack_to_chunk.ome_ngff import SPATIAL_UNIT
 
-__all__ = ["MultiScaleGroup"]
-
 
 class MultiScaleGroup:
-    """A class for creating and interacting with a OME-zarr multi-scale group."""
+    """
+    A class for creating and interacting with a OME-zarr multi-scale group.
+
+    Parameters
+    ----------
+    path :
+        Path to zarr group on disk.
+    name :
+        Name to save to zarr group.
+    voxel_size :
+        Size of a single voxel, in units of spatial_units.
+    spatial_units :
+        Units of the voxel size.
+
+    """
 
     def __init__(
         self,
         path: Path,
         *,
         name: str,
+        voxel_size: tuple[float, float, float],
         spatial_unit: SPATIAL_UNIT,
-        voxel_sizes: tuple[float, float, float],
     ):
         if path.exists():
             msg = f"{path} already exists"
@@ -48,7 +47,7 @@ class MultiScaleGroup:
         self._path = path
         self._name = name
         self._spatial_unit = spatial_unit
-        self._voxel_sizes = voxel_sizes
+        self._voxel_size = voxel_size
 
         self._create_zarr_group()
 
@@ -80,8 +79,8 @@ class MultiScaleGroup:
         """
         List of downsample levels currently stored.
 
-        Level 0 corresponds to full resolution data, and level `i` to
-        data downsampled by a factor of `2**i`.
+        Level 0 corresponds to full resolution data, and level ``i`` to
+        data downsampled by a factor of ``2**i``.
         """
         return [int(k) for k in self._group]
 
@@ -95,6 +94,19 @@ class MultiScaleGroup:
     ) -> None:
         """
         Add the 'original' full resolution data to this group.
+
+        Parameters
+        ----------
+        data :
+            Input data. Must be 3D, and have a chunksize of ``(nx, ny, 1)``, where
+            ``(nx, ny)`` is the shape of the input 2D slices.
+
+        chunk_size :
+            Size of chunks in output zarr dataset.
+        compressor :
+            Compressor to use when writing data to zarr dataset.
+        n_processes :
+            Number of parallel processes to use to read/write data.
 
         Raises
         ------
@@ -143,7 +155,17 @@ class MultiScaleGroup:
         """
         Add a level of downsampling.
 
-        Level `i` corresponds to a downsampling factor of `2**i`.
+        Parameters
+        ----------
+        level :
+            Level of downsampling. Level ``i`` corresponds to a downsampling factor
+            of ``2**i``.
+
+        Notes
+        -----
+        To add level ``i`` to the zarr group, level ``i - 1`` must first have been
+        added.
+
         """
         if not level >= 1 and int(level) == level:
             msg = "level must be an integer >= 1"

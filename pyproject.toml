@@ -39,6 +39,7 @@ optional-dependencies = {dev = [
     "pydata-sphinx-theme",
     "scikit-image",
     "sphinx",
+    "sphinx-autoapi",
     "sphinx-gallery",
     "tifffile",
 ]}
@@ -82,6 +83,7 @@ target-version = "py311"
 [tool.ruff.lint]
 ignore = [
     "D107", # Missing docstring
+    "D200", # One-line docstring should fit on one line
     "D203", # no-blank-line-before-class
     "D212", # multi-line-summary-first-line
     "D401", # imperitave mood

@@ -27,3 +27,4 @@ If we have input slices of shape ``(nx, ny)``, and an output chunk shape of ``(n
    :maxdepth: 2
 
    auto_examples/tutorial.rst
+   api
