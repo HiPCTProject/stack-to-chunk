@@ -1,9 +1,10 @@
 # stack-to-chunk
 
-[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![Tests status][tests-badge]][tests-link]
 [![codecov](https://codecov.io/gh/HiPCTProject/stack-to-chunk/graph/badge.svg?token=GBOWQFNYMP)](https://codecov.io/gh/HiPCTProject/stack-to-chunk)
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/HiPCTProject/stack-to-chunk/main.svg)](https://results.pre-commit.ci/latest/github/HiPCTProject/stack-to-chunk/main)
+[![Documentation Status](https://readthedocs.org/projects/stack-to-chunk/badge/?version=latest)](https://stack-to-chunk.readthedocs.io/en/latest/?badge=latest)
+
 [![Licence][licence-badge]](./LICENCE.md)
 
 <!--
