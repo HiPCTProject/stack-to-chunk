@@ -4,12 +4,28 @@ Utility functions for reading tiff files.
 Copied and modified from brainglobe/cellfinder and brainglobe/brainglobe-utils.
 """
 
+import os
 from pathlib import Path
 
 import dask.array as da
 from dask.delayed import delayed
 from numpy.typing import DTypeLike
 from tifffile import TiffFile, imread
+
+
+def load_env_var_as_path(env_var: str) -> Path:
+    """Load an environment variable as a Path object."""
+    path_str = os.getenv(env_var)
+
+    if path_str is None:
+        msg = f"Please set the environment variable {env_var}."
+        raise ValueError(msg)
+
+    path = Path(path_str)
+    if not path.is_dir():
+        msg = f"{path} is not a valid directory path."
+        raise ValueError(msg)
+    return path
 
 
 def get_tiff_meta(
