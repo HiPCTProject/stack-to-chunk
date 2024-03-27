@@ -25,4 +25,5 @@ If we have input slices of shape ``(nx, ny)``, and an output chunk shape of ``(n
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+
+   auto_examples/tutorial.rst

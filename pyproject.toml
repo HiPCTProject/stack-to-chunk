@@ -36,6 +36,7 @@ optional-dependencies = {dev = [
 ], docs = [
     "pydata-sphinx-theme",
     "sphinx",
+    "sphinx-gallery",
 ]}
 readme = "README.md"
 requires-python = ">=3.11"
@@ -89,6 +90,10 @@ ignore = [
 ]
 per-file-ignores = {"docs/*" = [
     "D100", # Missing docstring in public module
+], "docs/tutorial/*" = [
+    "D205",
+    "D400",
+    "D415",
 ], "test_*" = [
     "S101",
 ]}

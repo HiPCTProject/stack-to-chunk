@@ -20,7 +20,14 @@ language = "en"
 default_role = "any"
 nitpicky = True
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
-
+extensions = [
+    "sphinx_gallery.gen_gallery",
+]
+sphinx_gallery_conf = {
+    "examples_dirs": "tutorial",  # path to your example scripts
+    "gallery_dirs": "auto_examples",  # path to where to save gallery generated output
+    "filename_pattern": "/",
+}
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
@@ -39,4 +46,4 @@ html_theme_options = {
 html_use_index = False
 html_show_sourcelink = False
 html_show_copyright = False
-html_sidebars = {"**": ["sidebar-nav-bs", "sidebar-ethical-ads"]}
+html_sidebars: dict[str, list[str]] = {"**": []}
