@@ -19,6 +19,7 @@ def test_workflow(tmp_path: Path) -> None:
     )
 
     assert (tmp_path / "group.zarr").exists()
+    assert group.levels == []
 
     chunk_size = 64
     shape = (583, 245, 156)
@@ -31,6 +32,7 @@ def test_workflow(tmp_path: Path) -> None:
         compressor="default",
     )
 
+    assert group.levels == [0]
     zarr_arr = zarr.open(tmp_path / "group.zarr" / "0")
     assert zarr_arr.chunks == (chunk_size, chunk_size, chunk_size)
     assert zarr_arr.shape == shape
@@ -38,3 +40,6 @@ def test_workflow(tmp_path: Path) -> None:
 
     # Check that data is equal in dask array and zarr array
     np.testing.assert_equal(arr[:], zarr_arr[:])
+
+    group.add_downsample_level(1)
+    assert group.levels == [0, 1]

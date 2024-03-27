@@ -75,6 +75,16 @@ class MultiScaleGroup:
         multiscales["datasets"] = []
         self._group.attrs["multiscales"] = multiscales
 
+    @property
+    def levels(self) -> list[int]:
+        """
+        List of downsample levels currently stored.
+
+        Level 0 corresponds to full resolution data, and level `i` to
+        data downsampled by a factor of `2**i`.
+        """
+        return [int(k) for k in self._group]
+
     def add_full_res_data(
         self,
         data: da.Array,
@@ -129,35 +139,32 @@ class MultiScaleGroup:
 
         print("Finished full resolution copy to zarr.")
 
+    def add_downsample_level(self, level: int) -> None:
+        """
+        Add a level of downsampling.
 
-def downsample_group(group: zarr.Group, *, level: int) -> None:
-    """
-    Downsample a group.
+        Level `i` corresponds to a downsampling factor of `2**i`.
+        """
+        if not level >= 1 and int(level) == level:
+            msg = "level must be an integer >= 1"
+            raise ValueError(msg)
 
-    Parameters
-    ----------
-    path :
-        Path to zarr group store.
-    level : int
-        Level of downsampling to do.
-        A level of `i` corresponds to binning by a factor of `2**i`.
+        level_str = str(int(level))
+        if level_str in self._group:
+            msg = f"Level {level_str} already found in zarr group"
+            raise RuntimeError(msg)
 
-    """
-    full_res_data = group["0"]
+        if (level_minus_one := str(int(level) - 1)) not in self._group:
+            raise RuntimeError(
+                f"Level below (level={level_minus_one}) not present in group.",
+            )
 
-    if not level >= 1 and int(level) == level:
-        msg = "level must be an integer >= 1"
-        raise ValueError(msg)
+        source_data = self._group[level_minus_one]
+        new_shape = np.array(source_data.shape) // 2
 
-    level_str = str(int(level))
-    if level_str in group:
-        msg = f"Level {level_str} already found in zarr group"
-        raise RuntimeError(msg)
-
-    new_shape = np.array(full_res_data.shape) // 2
-    group[level_str] = zarr.create(
-        new_shape,
-        chunks=full_res_data.chunks,
-        dtype=full_res_data.dtype,
-        compressor=full_res_data.compressor,
-    )
+        self._group[level_str] = zarr.create(
+            new_shape,
+            chunks=source_data.chunks,
+            dtype=source_data.dtype,
+            compressor=source_data.compressor,
+        )
