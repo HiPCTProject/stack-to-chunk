@@ -1,9 +1,6 @@
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = [
-    "setuptools",
-    "setuptools-scm",
-]
+requires = ["setuptools>=64", "setuptools_scm>=8"]
 
 [project]
 authors = [
@@ -36,6 +33,9 @@ optional-dependencies = {dev = [
     "ruff",
     "tox>=4",
     "twine",
+], docs = [
+    "pydata-sphinx-theme",
+    "sphinx",
 ]}
 readme = "README.md"
 requires-python = ">=3.11"
@@ -83,7 +83,9 @@ ignore = [
     "S101", # no assert statements
     "T201", # no print statements
 ]
-per-file-ignores = {"test_*" = [
+per-file-ignores = {"docs/*" = [
+    "D100", # Missing docstring in public module
+], "test_*" = [
     "S101",
 ]}
 select = [
