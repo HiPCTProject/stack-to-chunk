@@ -17,6 +17,5 @@ def _copy_slab(arr_zarr: zarr.Array, slab: Array, zstart: int, zend: int) -> Non
         Start and end indices to copy to in destination array.
 
     """
-    print(f"Copying z={zstart} -> {zend}")
     # Write out data
     arr_zarr[:, :, zstart:zend] = np.array(slab)
