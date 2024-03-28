@@ -40,7 +40,7 @@ class MultiScaleGroup:
         name: str,
         voxel_size: tuple[float, float, float],
         spatial_unit: SPATIAL_UNIT,
-    ):
+    ) -> None:
         if path.exists():
             msg = f"{path} already exists"
             raise FileExistsError(msg)
@@ -177,8 +177,9 @@ class MultiScaleGroup:
             raise RuntimeError(msg)
 
         if (level_minus_one := str(int(level) - 1)) not in self._group:
+            msg = f"Level below (level={level_minus_one}) not present in group."
             raise RuntimeError(
-                f"Level below (level={level_minus_one}) not present in group.",
+                msg,
             )
 
         source_data = self._group[level_minus_one]
