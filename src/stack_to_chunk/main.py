@@ -2,6 +2,7 @@
 Main code for converting stacks to chunks.
 """
 
+from itertools import starmap
 from multiprocessing import Pool
 from pathlib import Path
 from typing import Any, Literal
@@ -120,7 +121,12 @@ class MultiScaleGroup:
             raise RuntimeError(msg)
 
         assert data.ndim == 3, "Input array is not 3-dimensional"
-        assert data.chunksize[2] == 1, "Input array is not chunked in slices"
+        if data.chunksize[2] != 1:
+            msg = (
+                f"Input array is must have a chunk size of 1 in the third dimension. "
+                f"Got chunks: {data.chunksize}"
+            )
+            raise ValueError(msg)
 
         logger.info("Setting up copy to zarr...")
         slice_size_bytes = (
@@ -148,9 +154,12 @@ class MultiScaleGroup:
         ]
 
         logger.info("Starting full resolution copy to zarr...")
-        blosc.use_threads = False
-        with Pool(n_processes) as p:
-            p.starmap(_copy_slab, args)
+        if n_processes > 1:
+            blosc.use_threads = False
+            with Pool(n_processes) as p:
+                p.starmap(_copy_slab, args)
+        else:
+            starmap(_copy_slab, args)
 
         logger.info("Finished full resolution copy to zarr.")
 

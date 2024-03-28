@@ -15,6 +15,8 @@ import skimage.color
 import skimage.data
 import tifffile
 
+import stack_to_chunk
+
 # %%
 # Generating sample data
 # ----------------------
@@ -23,7 +25,8 @@ import tifffile
 # To do this we'll just save 35 copies of a grayscale cat to a temporary directory.
 data_2d = skimage.color.rgb2gray(skimage.data.cat())
 temp_dir = tempfile.TemporaryDirectory()
-slice_dir = pathlib.Path(temp_dir.name) / "slices"
+temp_dir_path = pathlib.Path(temp_dir.name)
+slice_dir = temp_dir_path / "slices"
 slice_dir.mkdir()
 
 for i in range(35):
@@ -45,19 +48,44 @@ plt.imshow(data_2d, cmap="gray")
 # For this tutorial, ``dask_image`` provides a convenient way for us to read in all our
 # TIFF files:
 
-images = dask_image.imread.imread(str(slice_dir / "*.tif"))
+images = dask_image.imread.imread(str(slice_dir / "*.tif")).T
 print(images)
 
 # %%
 #
 # A few things to note here:
-#   - We have a single 3D dask array, with the array axes being the z, y, x axes of the
+#   - We have a single 3D dask array, with the array axes being the x, y, z axes of the
 #     image.
-#   - The chunk size of the dask array is ``(1, ny, nx)`` ie each individual slice
+#   - The chunk size of the dask array is ``(nx, ny, 1)`` ie each individual slice
 #     (corresponding) to each individual file on disk) is a chunk in the dask array.
 #
 # Running stack-to-chunk
 # ----------------------
+# The starting point for running ``stack-to-chunk`` is creating a `MultiScaleGroup`.
+# This represents a local zarr group that will contain the output multi-scale dataset.
+#
+# Once we've created it, the ``levels`` property shows that no levels have been added
+# to the group yet.
+
+group = stack_to_chunk.MultiScaleGroup(
+    temp_dir_path / "chunked.zarr",
+    name="my_zarr_group",
+    spatial_unit="centimeter",
+    voxel_size=(3, 4, 5),
+)
+print(group.levels)
+
+# %%
+# The first step in creating new data in the group is to make a copy of the data slices
+# without any downsampling:
+
+group.add_full_res_data(images, chunk_size=16, compressor="default", n_processes=1)
+print(group.levels)
+
+# %%
+# The levels property shows that we have added a level. Each level is downsampled by a
+# factor of ``2**level``, so level 0 is downsampled by a factor of 1, which is just
+# a copy of the original data.
 
 # %%
 # Cleanup
