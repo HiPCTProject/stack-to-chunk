@@ -1,9 +1,9 @@
-import dask.array as da
 import numpy as np
 import zarr
+from dask.array.core import Array
 
 
-def _copy_slab(arr_zarr: zarr.Array, slab: da.Array, zstart: int, zend: int) -> None:
+def _copy_slab(arr_zarr: zarr.Array, slab: Array, zstart: int, zend: int) -> None:
     """
     Copy a single slab of data to a zarr array.
 

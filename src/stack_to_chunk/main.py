@@ -6,9 +6,9 @@ from multiprocessing import Pool
 from pathlib import Path
 from typing import Any, Literal
 
-import dask.array as da
 import numpy as np
 import zarr
+from dask.array.core import Array
 from numcodecs import blosc
 from numcodecs.abc import Codec
 
@@ -86,7 +86,7 @@ class MultiScaleGroup:
 
     def add_full_res_data(
         self,
-        data: da.Array,
+        data: Array,
         *,
         chunk_size: int,
         compressor: Literal["default"] | Codec,

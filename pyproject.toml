@@ -58,20 +58,6 @@ paths.source = [
     ".tox*/*/lib/python*/site-packages",
 ]
 
-[tool.mypy]
-explicit_package_bases = true
-ignore_missing_imports = true
-plugins = [
-    "numpy.typing.mypy_plugin",
-]
-strict = true
-
-[[tool.mypy.overrides]]
-ignore_missing_imports = true
-module = [
-    "dask.*",
-]
-
 [tool.pytest.ini_options]
 addopts = "--color=yes -v"
 
