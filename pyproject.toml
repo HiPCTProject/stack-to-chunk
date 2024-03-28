@@ -26,14 +26,8 @@ keywords = [
 ]
 name = "stack_to_chunk"
 optional-dependencies = {dev = [
-    "black",
-    "build",
-    "mypy",
     "pre-commit",
-    "pytest",
-    "ruff",
     "tox>=4",
-    "twine",
 ], docs = [
     "dask-image",
     "matplotlib",
@@ -50,17 +44,15 @@ license.file = "LICENCE.md"
 urls.homepage = "https://github.com/HiPCTProject/stack-to-chunk"
 
 [tool.coverage]
-report = {skip_covered = true, sort = "cover"}
 run = {branch = true, parallel = true, source = [
     "stack_to_chunk",
 ]}
 paths.source = [
     "src",
-    ".tox*/*/lib/python*/site-packages",
 ]
 
 [tool.pytest.ini_options]
-addopts = "--color=yes -v"
+addopts = "--color=yes --cov -v"
 
 [tool.setuptools_scm]
 local_scheme = "no-local-version"
