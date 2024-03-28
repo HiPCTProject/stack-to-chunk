@@ -21,7 +21,7 @@ import tifffile
 #
 # We'll start by generating a set of sample data to downsample.
 # To do this we'll just save 35 copies of a grayscale cat to a temporary directory.
-data_2d = skimage.color.rgb2gray(skimage.data.cat())  # type: ignore[no-untyped-call]
+data_2d = skimage.color.rgb2gray(skimage.data.cat())
 temp_dir = tempfile.TemporaryDirectory()
 slice_dir = pathlib.Path(temp_dir.name) / "slices"
 slice_dir.mkdir()
