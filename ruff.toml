@@ -20,7 +20,6 @@ ignore = [
     "PLR0913", # too many arguments to function call
     "PLR2004", # no 'magic values'
     "S101", # no assert statements
-    "T201", # no print statements
 ]
 per-file-ignores = {"docs/*" = [
     "D100", # Missing docstring in public module
@@ -29,6 +28,7 @@ per-file-ignores = {"docs/*" = [
     "D205",
     "D400",
     "D415",
+    "T201", # `print` found
 ], "test_*" = [
     "INP001", # is part of an implicit namespace package
     "S101",

@@ -15,6 +15,7 @@ classifiers = [
 ]
 dependencies = [
     "dask",
+    "loguru",
     "zarr",
 ]
 description = "Convert stacks of images to chunked datasets"

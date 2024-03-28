@@ -9,6 +9,7 @@ from typing import Any, Literal
 import numpy as np
 import zarr
 from dask.array.core import Array
+from loguru import logger
 from numcodecs import blosc
 from numcodecs.abc import Codec
 
@@ -121,12 +122,14 @@ class MultiScaleGroup:
         assert data.ndim == 3, "Input array is not 3-dimensional"
         assert data.chunksize[2] == 1, "Input array is not chunked in slices"
 
-        print("Setting up copy to zarr...")
+        logger.info("Setting up copy to zarr...")
         slice_size_bytes = (
             data.nbytes // data.size * data.chunksize[0] * data.chunksize[1]
         )
         slab_size_bytes = slice_size_bytes * chunk_size
-        print(f"Each dask task will read ~{slab_size_bytes / 1e6:.02f} MB into memory")
+        logger.info(
+            f"Each dask task will read ~{slab_size_bytes / 1e6:.02f} MB into memory"
+        )
 
         self._group["0"] = zarr.create(
             data.shape,
@@ -144,12 +147,12 @@ class MultiScaleGroup:
             for (zmin, zmax) in slab_idxs
         ]
 
-        print("Starting full resolution copy to zarr...")
+        logger.info("Starting full resolution copy to zarr...")
         blosc.use_threads = False
         with Pool(n_processes) as p:
             p.starmap(_copy_slab, args)
 
-        print("Finished full resolution copy to zarr.")
+        logger.info("Finished full resolution copy to zarr.")
 
     def add_downsample_level(self, level: int) -> None:
         """
