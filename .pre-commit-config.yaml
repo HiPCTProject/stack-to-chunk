@@ -3,6 +3,7 @@ repos:
     rev: v0.3.4
     hooks:
       - id: ruff
+      - id: ruff-format
   - repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.5.5
     hooks:
@@ -15,7 +16,7 @@ repos:
     rev: v1.9.0
     hooks:
       - id: mypy
-        additional_dependencies: [numpy]
+        args: [--config-file, mypy.ini]
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v4.0.0-alpha.8
     hooks:
@@ -31,7 +32,3 @@ repos:
       - id: mixed-line-ending
         args: [--fix=lf]
       - id: trailing-whitespace
-  - repo: https://github.com/psf/black
-    rev: 24.3.0
-    hooks:
-      - id: black

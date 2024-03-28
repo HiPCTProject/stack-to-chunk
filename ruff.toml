@@ -1,0 +1,41 @@
+fix = true
+target-version = "py311"
+
+[format]
+docstring-code-format = true
+quote-style = "double"
+
+[lint]
+ignore = [
+    "ANN101", # Missing type annotation for `self`
+    "COM812",
+    "D107", # Missing docstring
+    "D200", # One-line docstring should fit on one line
+    "D203", # no-blank-line-before-class
+    "D212", # multi-line-summary-first-line
+    "D401", # imperitave mood
+    "D417", # argument description in docstring (unreliable)
+    "EM102", # Exception must not use an f-string literal, assign to variable first
+    "ISC001",
+    "PLR0913", # too many arguments to function call
+    "PLR2004", # no 'magic values'
+    "S101", # no assert statements
+    "T201", # no print statements
+]
+per-file-ignores = {"docs/*" = [
+    "D100", # Missing docstring in public module
+    "INP001", # is part of an implicit namespace package
+], "docs/tutorial/*" = [
+    "D205",
+    "D400",
+    "D415",
+], "test_*" = [
+    "INP001", # is part of an implicit namespace package
+    "S101",
+]}
+select = [
+    "ALL",
+]
+isort.known-first-party = [
+    "stack_to_chunk",
+]

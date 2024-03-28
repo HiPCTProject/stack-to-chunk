@@ -6,9 +6,9 @@ from multiprocessing import Pool
 from pathlib import Path
 from typing import Any, Literal
 
-import dask.array as da
 import numpy as np
 import zarr
+from dask.array.core import Array
 from numcodecs import blosc
 from numcodecs.abc import Codec
 
@@ -40,7 +40,7 @@ class MultiScaleGroup:
         name: str,
         voxel_size: tuple[float, float, float],
         spatial_unit: SPATIAL_UNIT,
-    ):
+    ) -> None:
         if path.exists():
             msg = f"{path} already exists"
             raise FileExistsError(msg)
@@ -86,7 +86,7 @@ class MultiScaleGroup:
 
     def add_full_res_data(
         self,
-        data: da.Array,
+        data: Array,
         *,
         chunk_size: int,
         compressor: Literal["default"] | Codec,
@@ -177,8 +177,9 @@ class MultiScaleGroup:
             raise RuntimeError(msg)
 
         if (level_minus_one := str(int(level) - 1)) not in self._group:
+            msg = f"Level below (level={level_minus_one}) not present in group."
             raise RuntimeError(
-                f"Level below (level={level_minus_one}) not present in group.",
+                msg,
             )
 
         source_data = self._group[level_minus_one]
