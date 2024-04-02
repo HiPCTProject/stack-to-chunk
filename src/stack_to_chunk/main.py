@@ -2,7 +2,6 @@
 Main code for converting stacks to chunks.
 """
 
-from itertools import starmap
 from multiprocessing import Pool
 from pathlib import Path
 from typing import Any, Literal
@@ -156,17 +155,13 @@ class MultiScaleGroup:
         logger.info("Starting full resolution copy to zarr...")
         blosc_use_threads = blosc.use_threads
 
-        if n_processes > 1:
-            # Use try/finally pattern to allow code coverage to be collected
-            p = Pool(n_processes)
-            try:
-                p.starmap(_copy_slab, args)
-            finally:
-                p.close()
-                p.join()
-
-        else:
-            starmap(_copy_slab, args)
+        # Use try/finally pattern to allow code coverage to be collected
+        p = Pool(n_processes)
+        try:
+            p.starmap(_copy_slab, args)
+        finally:
+            p.close()
+            p.join()
 
         blosc.use_threads = blosc_use_threads
         logger.info("Finished full resolution copy to zarr.")
