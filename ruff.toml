@@ -30,6 +30,7 @@ per-file-ignores = {"docs/*" = [
     "D415",
     "T201", # `print` found
 ], "test_*" = [
+    "D103", # Missing docstring in public function
     "INP001", # is part of an implicit namespace package
     "S101",
 ]}

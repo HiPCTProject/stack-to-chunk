@@ -179,7 +179,7 @@ class MultiScaleGroup:
         added.
 
         """
-        if not level >= 1 and int(level) == level:
+        if not (level >= 1 and int(level) == level):
             msg = "level must be an integer >= 1"
             raise ValueError(msg)
 
