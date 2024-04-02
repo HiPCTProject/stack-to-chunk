@@ -156,8 +156,15 @@ class MultiScaleGroup:
         logger.info("Starting full resolution copy to zarr...")
         if n_processes > 1:
             blosc.use_threads = False
-            with Pool(n_processes) as p:
+
+        if n_processes > 1:
+            # Use try/finally pattern to allow code coverage to be collected
+            p = Pool(n_processes)
+            try:
                 p.starmap(_copy_slab, args)
+            finally:
+                p.close()
+                p.join()
         else:
             starmap(_copy_slab, args)
 
