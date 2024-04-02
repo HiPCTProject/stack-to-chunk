@@ -1,4 +1,3 @@
-import numpy as np
 import zarr
 from dask.array.core import Array
 
@@ -18,4 +17,4 @@ def _copy_slab(arr_zarr: zarr.Array, slab: Array, zstart: int, zend: int) -> Non
 
     """
     # Write out data
-    arr_zarr[:, :, zstart:zend] = np.array(slab)
+    arr_zarr[:, :, zstart:zend] = slab.compute()
