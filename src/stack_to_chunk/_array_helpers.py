@@ -1,8 +1,13 @@
+import numpy as np
+import numpy.typing as npt
 import zarr
-from dask.array.core import Array
+from dask import delayed
 
 
-def _copy_slab(arr_zarr: zarr.Array, slab: Array, zstart: int, zend: int) -> None:
+@delayed  # type: ignore[misc]
+def _copy_slab(
+    arr_zarr: zarr.Array, slab: npt.NDArray[np.uint16], zstart: int, zend: int
+) -> None:
     """
     Copy a single slab of data to a zarr array.
 
@@ -17,4 +22,4 @@ def _copy_slab(arr_zarr: zarr.Array, slab: Array, zstart: int, zend: int) -> Non
 
     """
     # Write out data
-    arr_zarr[:, :, zstart:zend] = slab.compute()
+    arr_zarr[:, :, zstart:zend] = slab
