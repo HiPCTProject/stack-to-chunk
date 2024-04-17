@@ -8,6 +8,7 @@ import numcodecs
 import numpy as np
 import pytest
 import zarr
+from skimage.transform import resize
 
 from stack_to_chunk import MultiScaleGroup, memory_per_process
 
@@ -107,6 +108,20 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
 
     group.add_downsample_level(1)
     assert group.levels == [0, 1]
+    assert len(multiscales["datasets"]) == 2
+    for level in multiscales["datasets"]:
+        assert all(k in level for k in ["path", "coordinateTransformations"])
+
+    zarr_arr_1 = zarr.open(tmp_path / "group.zarr" / "1")
+    shape_1 = (292, 123, 78)
+    assert zarr_arr_1.chunks == zarr_arr.chunks
+    assert zarr_arr_1.shape == shape_1
+    assert zarr_arr_1.dtype == np.uint16
+
+    # The downsampled array should be equal to the original array downsampled
+    # directly with skimage.transform.resize (without chunking/parallelism)
+    directly_downsampled = resize(arr, shape_1, order=1).astype(np.uint16)
+    np.testing.assert_allclose(directly_downsampled[:], zarr_arr_1[:])
 
     with pytest.raises(RuntimeError, match="Level 1 already found in zarr group"):
         group.add_downsample_level(1)

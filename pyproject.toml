@@ -3,9 +3,7 @@ build-backend = "setuptools.build_meta"
 requires = ["setuptools>=64", "setuptools_scm>=8"]
 
 [project]
-authors = [
-    {email = "d.stansby@ucl.ac.uk", name = "HiP-CT Project"},
-]
+authors = [{email = "d.stansby@ucl.ac.uk", name = "HiP-CT Project"}]
 classifiers = [
     "Operating System :: POSIX",
     "Programming Language :: Python :: 3",
@@ -13,17 +11,10 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Typing :: Typed",
 ]
-dependencies = [
-    "dask",
-    "loguru",
-    "zarr",
-]
+dependencies = ["dask", "loguru", "ome-zarr", "zarr"]
 description = "Convert stacks of images to chunked datasets"
-dynamic = [
-    "version",
-]
-keywords = [
-]
+dynamic = ["version"]
+keywords = []
 name = "stack_to_chunk"
 optional-dependencies = {dev = [
     "pre-commit",
@@ -44,12 +35,8 @@ license.file = "LICENCE.md"
 urls.homepage = "https://github.com/HiPCTProject/stack-to-chunk"
 
 [tool.coverage]
-run = {branch = true, parallel = true, source = [
-    "stack_to_chunk",
-]}
-paths.source = [
-    "src",
-]
+run = {branch = true, parallel = true, source = ["stack_to_chunk"]}
+paths.source = ["src"]
 
 [tool.pytest.ini_options]
 addopts = "--color=yes --cov -v"

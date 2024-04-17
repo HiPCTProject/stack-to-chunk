@@ -6,12 +6,14 @@ from multiprocessing import Pool
 from pathlib import Path
 from typing import Any, Literal
 
+import dask.array as da
 import numpy as np
 import zarr
 from dask.array.core import Array
 from loguru import logger
 from numcodecs import blosc
 from numcodecs.abc import Codec
+from ome_zarr.dask_utils import resize
 
 from stack_to_chunk._array_helpers import _copy_slab
 from stack_to_chunk.ome_ngff import SPATIAL_UNIT
@@ -99,7 +101,7 @@ class MultiScaleGroup:
 
     def add_full_res_data(
         self,
-        data: Array,
+        data: da.Array,
         *,
         chunk_size: int,
         compressor: Literal["default"] | Codec,
@@ -212,15 +214,35 @@ class MultiScaleGroup:
                 msg,
             )
 
-        source_data = self._group[level_minus_one]
-        new_shape = np.ceil(np.array(source_data.shape) / 2)
+        logger.info(f"Downsampling level {level_minus_one} to level {level_str}...")
+        # Get the source data from the level below as a dask array
+        source_store = self._group[level_minus_one]
+        source_data = da.from_zarr(source_store, chunks=source_store.chunks)
+        new_shape = np.ceil(np.array(source_data.shape) / 2).astype(int)  # round up
 
-        self._group[level_str] = zarr.create(
-            new_shape,
-            chunks=source_data.chunks,
-            dtype=source_data.dtype,
-            compressor=source_data.compressor,
+        # Linearly downsample the data by a factor of 2 in each dimension
+        new_data = resize(  # dask-ified wrapper around skimage.transform.resize
+            source_data,
+            output_shape=new_shape,
+            order=1,
         )
+        logger.info(
+            f"Generated level {level_str} array with shape {new_data.shape} "
+            f"and chunk sizes {new_data.chunksize}, using linear interpolation."
+        )
+
+        # Create the new zarr store for the downsampled data
+        new_store = self._group.require_dataset(
+            level_str,
+            shape=new_data.shape,
+            chunks=source_store.chunks,
+            dtype=source_store.dtype,
+            compressor=source_store.compressor,
+        )
+        # Write the downsampled data to the new store
+        new_data.to_zarr(new_store, compute=True)
+        self._add_level_metadata(level)
+        logger.info(f"Saved {level_str} to zarr.")
 
     def _add_level_metadata(self, level: int = 0) -> None:
         """
