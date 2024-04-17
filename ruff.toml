@@ -33,10 +33,7 @@ per-file-ignores = {"docs/*" = [
     "D103", # Missing docstring in public function
     "INP001", # is part of an implicit namespace package
     "S101",
+    "SLF001", # Private member accessed
 ]}
-select = [
-    "ALL",
-]
-isort.known-first-party = [
-    "stack_to_chunk",
-]
+select = ["ALL"]
+isort.known-first-party = ["stack_to_chunk"]

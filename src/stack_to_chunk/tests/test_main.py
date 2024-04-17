@@ -34,6 +34,32 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
 
     compressor = numcodecs.blosc.Blosc(cname="zstd", clevel=2, shuffle=2)
     chunk_size = 64
+    shape = (583, 245, 156)
+    arr = da.random.randint(low=0, high=2**16, dtype=np.uint16, size=shape)
+    arr = arr.rechunk(chunks=(shape[0], shape[1], 1))
+
+    expected_multiscales_keys = [
+        "name",
+        "axes",
+        "version",
+        "datasets",
+        "type",
+        "metadata",
+    ]
+    multiscales = group._group.attrs["multiscales"]
+    assert all(k in multiscales for k in expected_multiscales_keys)
+    assert len(multiscales["datasets"]) == 0
+
+    with pytest.raises(
+        ValueError,
+        match="Input array is must have a chunk size of 1 in the third dimension.",
+    ):
+        group.add_full_res_data(
+            arr.rechunk(chunks=(shape[0], shape[1], 2)),
+            n_processes=2,
+            chunk_size=chunk_size,
+            compressor="default",
+        )
 
     assert memory_per_process(arr, chunk_size=chunk_size) == 18282880
     group.add_full_res_data(
@@ -42,6 +68,10 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
         chunk_size=chunk_size,
         compressor=compressor,
     )
+
+    assert len(multiscales["datasets"]) == 1
+    level_0 = multiscales["datasets"][0]
+    assert all(k in level_0 for k in ["path", "coordinateTransformations"])
 
     assert group.levels == [0]
     zarr_arr = zarr.open(zarr_path / "0")
