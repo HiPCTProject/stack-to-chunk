@@ -25,3 +25,11 @@
 [pypi-version]:             https://img.shields.io/pypi/v/stack-to-chunk
 [licence-badge]:            https://img.shields.io/badge/License-BSD_3--Clause-blue.svg
 <!-- prettier-ignore-end -->
+
+## Contributing
+
+This code is designed and specialised to work with data from the [HiP-CT project](https://mecheng.ucl.ac.uk/hip-ct/), but openly available in the hope it might be useful for other people or groups.
+Bug reports and fixes are very welcome - please open at least an issue and then optionally a pull request to fix the issue.
+
+New functionality might be welcome, depending on whether it is in scope of the package and how much maintenance burden it would add.
+For new features please open an issue to discuss first before developing anything to avoid wasted effort!
