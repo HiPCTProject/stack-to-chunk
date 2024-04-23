@@ -137,8 +137,9 @@ class MultiScaleGroup:
             f"Each dask task will read ~{slab_size_bytes / 1e6:.02f} MB into memory"
         )
 
-        self._group["0"] = zarr.create(
-            data.shape,
+        self._group.create_dataset(
+            name="0",
+            shape=data.shape,
             chunks=chunk_size,
             dtype=data.dtype,
             compressor=compressor,
