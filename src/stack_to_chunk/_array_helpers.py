@@ -1,4 +1,5 @@
 import dask.array as da
+import numpy as np
 import zarr
 from loguru import logger
 
@@ -18,9 +19,12 @@ def _copy_slab(arr_zarr: zarr.Array, slab: da.Array, zstart: int, zend: int) -> 
 
     """
     logger.info(f"Reading z={zstart} -> {zend}")
-    # Read in data
-    slab = slab.compute(num_workers=1)
+    data = np.empty(slab.shape, dtype=slab.dtype)
+    for i in range(slab.shape[2]):
+        logger.info(f"Reading {zstart + i}")
+        data[:, :, i] = np.array(slab[:, :, i])
+
     logger.info(f"Writing z={zstart} -> {zend}")
     # Write out data
-    arr_zarr[:, :, zstart:zend] = slab
+    arr_zarr[:, :, zstart:zend] = data
     logger.info(f"Finished copying z={zstart} -> {zend}")

@@ -133,7 +133,7 @@ class MultiScaleGroup:
         )
         slab_size_bytes = slice_size_bytes * chunk_size
         logger.info(
-            f"Each dask task will read ~{slab_size_bytes / 1e6:.02f} MB into memory"
+            f"Each process will read ~{slab_size_bytes / 1e6:.02f} MB into memory"
         )
 
         self._group.create_dataset(
