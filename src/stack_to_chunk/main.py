@@ -2,14 +2,13 @@
 Main code for converting stacks to chunks.
 """
 
+from multiprocessing import Pool
 from pathlib import Path
 from typing import Any, Literal
 
 import numpy as np
 import zarr
-from dask import delayed
 from dask.array.core import Array
-from dask.diagnostics import ProgressBar
 from loguru import logger
 from numcodecs import blosc
 from numcodecs.abc import Codec
@@ -134,13 +133,13 @@ class MultiScaleGroup:
         )
         slab_size_bytes = slice_size_bytes * chunk_size
         logger.info(
-            f"Each dask task will read ~{slab_size_bytes / 1e6:.02f} MB into memory"
+            f"Each process will read ~{slab_size_bytes / 1e6:.02f} MB into memory"
         )
 
         self._group.create_dataset(
             name="0",
             shape=data.shape,
-            chunks=chunk_size,
+            chunks=(chunk_size, chunk_size, chunk_size),
             dtype=data.dtype,
             compressor=compressor,
         )
@@ -158,9 +157,13 @@ class MultiScaleGroup:
         blosc_use_threads = blosc.use_threads
         blosc.use_threads = 0
 
-        results = delayed([_copy_slab(*args) for args in all_args])
-        with ProgressBar(dt=1):
-            results.compute(num_workers=n_processes)
+        # Use try/finally pattern to allow code coverage to be collected
+        p = Pool(n_processes)
+        try:
+            p.starmap(_copy_slab, all_args)
+        finally:
+            p.close()
+            p.join()
 
         blosc.use_threads = blosc_use_threads
         logger.info("Finished full resolution copy to zarr.")

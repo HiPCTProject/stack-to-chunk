@@ -1,13 +1,10 @@
+import dask.array as da
 import numpy as np
-import numpy.typing as npt
 import zarr
-from dask import delayed
+from loguru import logger
 
 
-@delayed  # type: ignore[misc]
-def _copy_slab(
-    arr_zarr: zarr.Array, slab: npt.NDArray[np.uint16], zstart: int, zend: int
-) -> None:
+def _copy_slab(arr_zarr: zarr.Array, slab: da.Array, zstart: int, zend: int) -> None:
     """
     Copy a single slab of data to a zarr array.
 
@@ -21,5 +18,13 @@ def _copy_slab(
         Start and end indices to copy to in destination array.
 
     """
+    logger.info(f"Reading z={zstart} -> {zend-1}")
+    data = np.empty(slab.shape, dtype=slab.dtype)
+    for i in range(slab.shape[2]):
+        logger.info(f"Reading z={zstart + i}")
+        data[:, :, i] = np.array(slab[:, :, i])
+
+    logger.info(f"Writing z={zstart} -> {zend-1}")
     # Write out data
-    arr_zarr[:, :, zstart:zend] = slab
+    arr_zarr[:, :, zstart:zend] = data
+    logger.info(f"Finished copying z={zstart} -> {zend-1}")
