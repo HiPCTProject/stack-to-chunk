@@ -7,6 +7,7 @@ This page steps through going from a set of 2D image files to a
 """
 
 import pathlib
+import sys
 import tempfile
 
 import dask_image.imread
@@ -14,6 +15,7 @@ import matplotlib.pyplot as plt
 import skimage.color
 import skimage.data
 import tifffile
+from loguru import logger
 
 import stack_to_chunk
 
@@ -77,15 +79,20 @@ print(group.levels)
 
 # %%
 # The first step in creating new data in the group is to make a copy of the data slices
-# without any downsampling:
+# without any downsampling. We'll also enable logging here, so we can see that
+# stack-to-chunk provides some useful progress messages:
+
+logger.enable("stack_to_chunk")
+logger.add(sys.stdout, level="INFO")
 
 group.add_full_res_data(images, chunk_size=16, compressor="default", n_processes=1)
-print(group.levels)
+
 
 # %%
-# The levels property shows that we have added a level. Each level is downsampled by a
-# factor of ``2**level``, so level 0 is downsampled by a factor of 1, which is just
-# a copy of the original data.
+# The levels property can be inspected to show we've added the first level. Ekach level
+# is downsampled by a factor of ``2**level``, so level 0 is downsampled by a factor of
+# 1, which is just a copy of the original data (as expected).
+print(group.levels)
 
 # %%
 # Cleanup
