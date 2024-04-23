@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import dask.array as da
+import numcodecs
 import numpy as np
 import pytest
 import zarr
@@ -27,6 +28,8 @@ def test_workflow(tmp_path: Path) -> None:
     arr = da.random.randint(low=0, high=2**16, dtype=np.uint16, size=shape)
     arr = arr.rechunk(chunks=(shape[0], shape[1], 1))
 
+    compressor = numcodecs.blosc.Blosc(cname="zstd", clevel=2, shuffle=2)
+
     with pytest.raises(
         ValueError,
         match="Input array is must have a chunk size of 1 in the third dimension.",
@@ -35,14 +38,14 @@ def test_workflow(tmp_path: Path) -> None:
             arr.rechunk(chunks=(shape[0], shape[1], 2)),
             n_processes=2,
             chunk_size=chunk_size,
-            compressor="default",
+            compressor=compressor,
         )
 
     group.add_full_res_data(
         arr,
         n_processes=2,
         chunk_size=chunk_size,
-        compressor="default",
+        compressor=compressor,
     )
     with pytest.raises(
         RuntimeError, match="Full resolution data already added to this zarr group."
@@ -59,6 +62,7 @@ def test_workflow(tmp_path: Path) -> None:
     assert zarr_arr.chunks == (chunk_size, chunk_size, chunk_size)
     assert zarr_arr.shape == shape
     assert zarr_arr.dtype == np.uint16
+    assert zarr_arr.compressor == compressor
 
     # Check that data is equal in dask array and zarr array
     np.testing.assert_equal(arr[:], zarr_arr[:])
