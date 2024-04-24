@@ -79,11 +79,21 @@ print(group.levels)
 
 # %%
 # The first step in creating new data in the group is to make a copy of the data slices
-# without any downsampling. We'll also enable logging here, so we can see that
-# stack-to-chunk provides some useful progress messages:
+# without any downsampling. Before doing this lets do a quick check of how much memory
+# each process will take up when we run stack-to-chunk:
+
+bytes_per_process = stack_to_chunk.memory_per_process(images, chunk_size=16)
+print(f"Each process will use {bytes_per_process / 1e6:.1f} MB")
+
+# %%
+# We'll also enable logging here, so we can see that stack-to-chunk provides some
+# useful progress messages:
 
 logger.enable("stack_to_chunk")
 logger.add(sys.stdout, level="INFO")
+
+# %%
+# And finally, lets create our first data copy:
 
 group.add_full_res_data(images, chunk_size=16, compressor="default", n_processes=1)
 

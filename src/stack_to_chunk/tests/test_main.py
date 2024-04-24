@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 import zarr
 
-from stack_to_chunk import MultiScaleGroup
+from stack_to_chunk import MultiScaleGroup, memory_per_process
 
 
 def test_workflow(tmp_path: Path) -> None:
@@ -41,6 +41,7 @@ def test_workflow(tmp_path: Path) -> None:
             compressor=compressor,
         )
 
+    assert memory_per_process(arr, chunk_size=chunk_size) == 18282880
     group.add_full_res_data(
         arr,
         n_processes=2,
