@@ -17,6 +17,18 @@ from stack_to_chunk._array_helpers import _copy_slab
 from stack_to_chunk.ome_ngff import SPATIAL_UNIT
 
 
+def memory_per_process(input_data: Array, *, chunk_size: int) -> int:
+    """
+    The amount of memory each stack-to-chunk process will use (in bytes).
+
+    This is a lower bound on memory use, equal to the size of a slab of data with size
+    (nx, ny, chunk_size), where (nx, ny) is the shape of a single input
+    slice and chunk_size is the chunk size of the output zarr store.
+    """
+    itemsize = np.dtype(input_data.dtype).itemsize
+    return int(input_data.shape[0]) * int(input_data.shape[1]) * itemsize * chunk_size
+
+
 class MultiScaleGroup:
     """
     A class for creating and interacting with a OME-zarr multi-scale group.
@@ -200,7 +212,7 @@ class MultiScaleGroup:
             )
 
         source_data = self._group[level_minus_one]
-        new_shape = np.array(source_data.shape) // 2
+        new_shape = np.ceil(np.array(source_data.shape) / 2)
 
         self._group[level_str] = zarr.create(
             new_shape,
