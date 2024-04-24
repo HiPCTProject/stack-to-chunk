@@ -26,7 +26,7 @@ def memory_per_process(input_data: Array, *, chunk_size: int) -> int:
     slice and chunk_size is the chunk size of the output zarr store.
     """
     itemsize = np.dtype(input_data.dtype).itemsize
-    return int(input_data.shape[0]) * int(input_data.shape[1]) * itemsize * chunk_size
+    return int(input_data.shape[0] * input_data.shape[1] * itemsize * chunk_size)
 
 
 class MultiScaleGroup:
