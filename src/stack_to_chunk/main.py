@@ -13,7 +13,7 @@ from loguru import logger
 from numcodecs import blosc
 from numcodecs.abc import Codec
 
-from stack_to_chunk._array_helpers import _copy_slab
+from stack_to_chunk._array_helpers import _copy_slab, _downsample_block
 from stack_to_chunk.ome_ngff import SPATIAL_UNIT
 
 
@@ -96,6 +96,15 @@ class MultiScaleGroup:
         data downsampled by a factor of ``2**i``.
         """
         return [int(k) for k in self._group]
+
+    def __getitem__(self, level: int) -> zarr.Array:
+        """
+        Get zarr Array for a  given level.
+        """
+        if level not in self.levels:
+            raise ValueError(f"Given level {level} not in added levels {self.levels}")
+
+        return self._group[str(level)]
 
     def create_initial_dataset(
         self, data: Array, *, chunk_size: int, compressor: Literal["default"] | Codec
@@ -225,7 +234,7 @@ class MultiScaleGroup:
         blosc.use_threads = blosc_use_threads
         logger.info("Finished full resolution copy to zarr.")
 
-    def add_downsample_level(self, level: int) -> None:
+    def add_downsample_level(self, level: int, *, n_processes: int) -> None:
         """
         Add a level of downsampling.
 
@@ -234,6 +243,8 @@ class MultiScaleGroup:
         level :
             Level of downsampling. Level ``i`` corresponds to a downsampling factor
             of ``2**i``.
+        n_processes :
+            Number of parallel processes to use to read/write data.
 
         Notes
         -----
@@ -256,15 +267,40 @@ class MultiScaleGroup:
                 msg,
             )
 
-        source_data = self._group[level_minus_one]
-        new_shape = np.ceil(np.array(source_data.shape) / 2)
+        source_arr = self._group[level_minus_one]
+        new_shape = np.ceil(np.array(source_arr.shape) / 2)
+        chunk_size = source_arr.chunks[0]
 
-        self._group[level_str] = zarr.create(
-            new_shape,
-            chunks=source_data.chunks,
-            dtype=source_data.dtype,
-            compressor=source_data.compressor,
+        sink_arr = self._group.create_dataset(
+            name=level_str,
+            shape=new_shape,
+            chunks=source_arr.chunks,
+            dtype=source_arr.dtype,
+            compressor=source_arr.compressor,
         )
+
+        block_indices = []
+        for x in range(0, source_arr.shape[0], chunk_size * 2):
+            for y in range(0, source_arr.shape[1], chunk_size * 2):
+                for z in range(0, source_arr.shape[2], chunk_size * 2):
+                    block_indices.append((x, y, z))
+
+        all_args = [(source_arr, sink_arr, idxs) for idxs in block_indices]
+
+        logger.info(f"Starting downsampling from level {level_minus_one} > {level}...")
+        blosc_use_threads = blosc.use_threads
+        blosc.use_threads = 0
+
+        # Use try/finally pattern to allow code coverage to be collected
+        p = Pool(n_processes)
+        try:
+            p.starmap(_downsample_block, all_args)
+        finally:
+            p.close()
+            p.join()
+
+        blosc.use_threads = blosc_use_threads
+        logger.info(f"Finished downsampling from level {level_minus_one} > {level}")
 
     def _add_level_metadata(self, level: int = 0) -> None:
         """

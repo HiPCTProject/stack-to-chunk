@@ -127,19 +127,19 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
     group = open_multiscale_group(zarr_path)
     assert group.levels == [0]
 
-    group.add_downsample_level(1)
+    group.add_downsample_level(1, n_processes=2)
     assert group.levels == [0, 1]
 
     with pytest.raises(RuntimeError, match="Level 1 already found in zarr group"):
-        group.add_downsample_level(1)
+        group.add_downsample_level(1, n_processes=2)
     with pytest.raises(
         RuntimeError, match=r"Level below \(level=2\) not present in group."
     ):
-        group.add_downsample_level(3)
+        group.add_downsample_level(3, n_processes=2)
     with pytest.raises(ValueError, match="level must be an integer >= 1"):
-        group.add_downsample_level(0.1)  # type: ignore[arg-type]
+        group.add_downsample_level(0.1, n_processes=2)  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="level must be an integer >= 1"):
-        group.add_downsample_level(-2)
+        group.add_downsample_level(-2, n_processes=2)
 
 
 def test_parallel_copy(tmp_path: Path, arr: da.Array) -> None:
