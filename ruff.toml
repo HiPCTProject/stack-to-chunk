@@ -35,5 +35,9 @@ per-file-ignores = {"docs/*" = [
     "S101",
     "SLF001", # Private member accessed
 ]}
-select = ["ALL"]
-isort.known-first-party = ["stack_to_chunk"]
+select = [
+    "ALL",
+]
+isort.known-first-party = [
+    "stack_to_chunk",
+]
