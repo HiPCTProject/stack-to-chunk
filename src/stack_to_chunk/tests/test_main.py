@@ -13,14 +13,15 @@ from stack_to_chunk import MultiScaleGroup, memory_per_process
 
 def test_workflow(tmp_path: Path) -> None:
     """Basic smoke test of the workflow as a user would use it."""
+    zarr_path = tmp_path / "group.ome.zarr"
     group = MultiScaleGroup(
-        tmp_path / "group.zarr",
+        tmp_path / zarr_path,
         name="my_zarr_group",
         spatial_unit="centimeter",
         voxel_size=(3, 4, 5),
     )
 
-    assert (tmp_path / "group.zarr").exists()
+    assert (zarr_path).exists()
     assert group.levels == []
 
     chunk_size = 64
