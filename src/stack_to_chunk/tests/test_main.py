@@ -57,18 +57,20 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
     with (zarr_path / ".zattrs").open() as f:
         data = json.load(f)
     assert data == {
-        "multiscales": {
-            "axes": [
-                {"name": "z", "type": "space", "unit": "centimeter"},
-                {"name": "y", "type": "space", "unit": "centimeter"},
-                {"name": "x", "type": "space", "unit": "centimeter"},
-            ],
-            "datasets": [],
-            "metadata": {"description": "Downscaled using linear resampling"},
-            "name": "my_zarr_group",
-            "type": "linear",
-            "version": "0.4",
-        }
+        "multiscales": [
+            {
+                "axes": [
+                    {"name": "x", "type": "space", "unit": "centimeter"},
+                    {"name": "y", "type": "space", "unit": "centimeter"},
+                    {"name": "z", "type": "space", "unit": "centimeter"},
+                ],
+                "datasets": [],
+                "metadata": {"description": "Downscaled using linear resampling"},
+                "name": "my_zarr_group",
+                "type": "linear",
+                "version": "0.4",
+            }
+        ]
     }
 
     with (zarr_path / ".zgroup").open() as f:
