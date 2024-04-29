@@ -237,7 +237,7 @@ class MultiScaleGroup:
         # Write the downsampled data to the new store
         new_data.to_zarr(new_store, compute=True)
         self._add_level_metadata(level)
-        logger.info(f"Saved {level_str} to zarr.")
+        logger.info(f"Saved level {level_str} to zarr.")
 
     def _add_level_metadata(self, level: int = 0) -> None:
         """

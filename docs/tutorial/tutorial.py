@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import skimage.color
 import skimage.data
 import tifffile
+import zarr
 from loguru import logger
 
 import stack_to_chunk
@@ -99,10 +100,46 @@ group.add_full_res_data(images, chunk_size=16, compressor="default", n_processes
 
 
 # %%
-# The levels property can be inspected to show we've added the first level. Ekach level
-# is downsampled by a factor of ``2**level``, so level 0 is downsampled by a factor of
-# 1, which is just a copy of the original data (as expected).
+# The levels property can be inspected to show we've added the first level (level 0):
 print(group.levels)
+
+# %%
+# Next, we will add some downsampled levels to the group. This is done by calling
+# ``add_downsample_level`` on the group object. Each level is linearly downsampled by a
+# factor of :math:`2^{level}`, so level 0 is downsampled by a factor of 1 (original
+# resolution), level 1 is downsampled by a factor of 2, level 2 by a factor of 4,
+# and so on.
+
+group.add_downsample_level(1)
+group.add_downsample_level(2)
+
+# %%
+# We can see from the progress messages that the shape of each level is half the size of
+# the previous level (rounded up to the nearest integer). The chunk sizes are maintained
+# the same as in the original data (until the image size is less than the chunk size).
+
+# %%
+# We can inspect the levels property again to check that levels 0, 1, and 2 are present:
+print(group.levels)
+
+# %%
+# Note that the downampled levels have to be added in order, so we can't add level 3
+# before adding level 2 (because the previous level is needed to calculate the next).
+
+# %%
+# Let's plot the downsampled data to see what it looks like.
+# We turn off interpolation (which ``imshow`` does by default) to make the pixelation
+# at downsampled levels more clearly visible.
+
+fig, ax = plt.subplots(1, 3, figsize=(12, 4))
+for i, level in enumerate(group.levels):
+    data = zarr.open(temp_dir_path / "chunked.zarr" / str(level))
+    first_slice = data[:].transpose(2, 1, 0)[0]
+    ax[i].imshow(first_slice, cmap="gray", interpolation="none")
+    ax[i].set_title(f"Level {level}")
+    ax[i].axis("off")
+fig.tight_layout()
+fig.show()
 
 # %%
 # Cleanup
