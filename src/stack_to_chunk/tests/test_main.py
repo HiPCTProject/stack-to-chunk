@@ -70,10 +70,6 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
         compressor=compressor,
     )
 
-    assert len(multiscales["datasets"]) == 1
-    level_0 = multiscales["datasets"][0]
-    assert all(k in level_0 for k in ["path", "coordinateTransformations"])
-
     assert group.levels == [0]
     zarr_arr = zarr.open(zarr_path / "0")
     assert zarr_arr.chunks == (chunk_size, chunk_size, chunk_size)
@@ -94,7 +90,14 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
                 {"name": "y", "type": "space", "unit": "centimeter"},
                 {"name": "x", "type": "space", "unit": "centimeter"},
             ],
-            "datasets": [],
+            "datasets": [
+                {
+                    "path": "0",
+                    "coordinateTransformations": [
+                        {"type": "scale", "scale": [3.0, 4.0, 5.0]}
+                    ],
+                }
+            ],
             "metadata": {"description": "Downscaled using linear resampling"},
             "name": "my_zarr_group",
             "type": "linear",
@@ -106,13 +109,20 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
         data = json.load(f)
     assert data == {"zarr_format": 2}
 
+    # Check that adding a downsample level works
     group.add_downsample_level(1)
     assert group.levels == [0, 1]
-    assert len(multiscales["datasets"]) == 2
-    for level in multiscales["datasets"]:
-        assert all(k in level for k in ["path", "coordinateTransformations"])
-
-    zarr_arr_1 = zarr.open(tmp_path / "group.zarr" / "1")
+    assert multiscales["datasets"] == [
+        {
+            "path": "0",
+            "coordinateTransformations": [{"type": "scale", "scale": [3.0, 4.0, 5.0]}],
+        },
+        {
+            "path": "1",
+            "coordinateTransformations": [{"type": "scale", "scale": [6.0, 8.0, 10.0]}],
+        },
+    ]
+    zarr_arr_1 = zarr.open(zarr_path / "1")
     shape_1 = (292, 123, 78)
     assert zarr_arr_1.chunks == zarr_arr.chunks
     assert zarr_arr_1.shape == shape_1

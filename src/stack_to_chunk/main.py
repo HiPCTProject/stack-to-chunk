@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import dask.array as da
+import numpy as np
 import zarr
 from dask.array.core import Array
 from loguru import logger
