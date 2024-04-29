@@ -77,9 +77,9 @@ class MultiScaleGroup:
         multiscales["version"] = "0.4"
         multiscales["name"] = self._name
         multiscales["axes"] = [
-            {"name": "z", "type": "space", "unit": self._spatial_unit},
-            {"name": "y", "type": "space", "unit": self._spatial_unit},
             {"name": "x", "type": "space", "unit": self._spatial_unit},
+            {"name": "y", "type": "space", "unit": self._spatial_unit},
+            {"name": "z", "type": "space", "unit": self._spatial_unit},
         ]
         multiscales["type"] = "linear"
         multiscales["metadata"] = {
@@ -87,7 +87,7 @@ class MultiScaleGroup:
         }
 
         multiscales["datasets"] = []
-        self._group.attrs["multiscales"] = multiscales
+        self._group.attrs["multiscales"] = [multiscales]
 
     @property
     def levels(self) -> list[int]:
@@ -261,8 +261,8 @@ class MultiScaleGroup:
             ],
         }
 
-        multiscales = self._group.attrs["multiscales"]
+        multiscales = self._group.attrs["multiscales"][0]
         existing_dataset_paths = [d["path"] for d in multiscales["datasets"]]
         if new_dataset["path"] not in existing_dataset_paths:
             multiscales["datasets"].append(new_dataset)
-        self._group.attrs["multiscales"] = multiscales
+        self._group.attrs["multiscales"] = [multiscales]

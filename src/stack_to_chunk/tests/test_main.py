@@ -39,18 +39,6 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
     arr = da.random.randint(low=0, high=2**16, dtype=np.uint16, size=shape)
     arr = arr.rechunk(chunks=(shape[0], shape[1], 1))
 
-    expected_multiscales_keys = [
-        "name",
-        "axes",
-        "version",
-        "datasets",
-        "type",
-        "metadata",
-    ]
-    multiscales = group._group.attrs["multiscales"]
-    assert all(k in multiscales for k in expected_multiscales_keys)
-    assert len(multiscales["datasets"]) == 0
-
     with pytest.raises(
         ValueError,
         match="Input array is must have a chunk size of 1 in the third dimension.",
@@ -76,42 +64,54 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
     assert zarr_arr.shape == arr.shape
     assert zarr_arr.dtype == np.uint16
     assert zarr_arr.compressor == compressor
-
     # Check that data is equal in dask array and zarr array
     np.testing.assert_equal(arr[:], zarr_arr[:])
-
     # Check metadata
     with (zarr_path / ".zattrs").open() as f:
         data = json.load(f)
     assert data == {
-        "multiscales": {
-            "axes": [
-                {"name": "z", "type": "space", "unit": "centimeter"},
-                {"name": "y", "type": "space", "unit": "centimeter"},
-                {"name": "x", "type": "space", "unit": "centimeter"},
-            ],
-            "datasets": [
-                {
-                    "path": "0",
-                    "coordinateTransformations": [
-                        {"type": "scale", "scale": [3.0, 4.0, 5.0]}
-                    ],
-                }
-            ],
-            "metadata": {"description": "Downscaled using linear resampling"},
-            "name": "my_zarr_group",
-            "type": "linear",
-            "version": "0.4",
-        }
+        "multiscales": [
+            {
+                "axes": [
+                    {"name": "x", "type": "space", "unit": "centimeter"},
+                    {"name": "y", "type": "space", "unit": "centimeter"},
+                    {"name": "z", "type": "space", "unit": "centimeter"},
+                ],
+                "datasets": [
+                    {
+                        "coordinateTransformations": [
+                            {"type": "scale", "scale": [3.0, 4.0, 5.0]}
+                        ],
+                        "path": "0",
+                    }
+                ],
+                "metadata": {"description": "Downscaled using linear resampling"},
+                "name": "my_zarr_group",
+                "type": "linear",
+                "version": "0.4",
+            }
+        ]
     }
 
     with (zarr_path / ".zgroup").open() as f:
         data = json.load(f)
     assert data == {"zarr_format": 2}
 
+    # Check that trying to add data again fails
+    with pytest.raises(
+        RuntimeError, match="Full resolution data already added to this zarr group."
+    ):
+        group.add_full_res_data(
+            arr,
+            n_processes=2,
+            chunk_size=64,
+            compressor="default",
+        )
+
     # Check that adding a downsample level works
     group.add_downsample_level(1)
     assert group.levels == [0, 1]
+    multiscales = group._group.attrs["multiscales"][0]
     assert multiscales["datasets"] == [
         {
             "path": "0",
@@ -174,32 +174,6 @@ def test_wrong_chunksize(tmp_path: Path, arr: da.Array) -> None:
     ):
         group.add_full_res_data(
             arr.rechunk(chunks=(arr.shape[0], arr.shape[1], 2)),
-            n_processes=2,
-            chunk_size=64,
-            compressor="default",
-        )
-
-
-def test_double_add(tmp_path: Path, arr: da.Array) -> None:
-    zarr_path = tmp_path / "group.ome.zarr"
-    group = MultiScaleGroup(
-        tmp_path / zarr_path,
-        name="my_zarr_group",
-        spatial_unit="centimeter",
-        voxel_size=(3, 4, 5),
-    )
-
-    group.add_full_res_data(
-        arr,
-        n_processes=2,
-        chunk_size=64,
-        compressor="default",
-    )
-    with pytest.raises(
-        RuntimeError, match="Full resolution data already added to this zarr group."
-    ):
-        group.add_full_res_data(
-            arr,
             n_processes=2,
             chunk_size=64,
             compressor="default",
