@@ -34,17 +34,6 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
     compressor = numcodecs.blosc.Blosc(cname="zstd", clevel=2, shuffle=2)
     chunk_size = 64
 
-    with pytest.raises(
-        ValueError,
-        match="Input array is must have a chunk size of 1 in the third dimension.",
-    ):
-        group.add_full_res_data(
-            arr.rechunk(chunks=(arr.shape[0], arr.shape[1], 2)),
-            n_processes=2,
-            chunk_size=chunk_size,
-            compressor=compressor,
-        )
-
     assert memory_per_process(arr, chunk_size=chunk_size) == 18282880
     group.add_full_res_data(
         arr,
@@ -52,18 +41,9 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
         chunk_size=chunk_size,
         compressor=compressor,
     )
-    with pytest.raises(
-        RuntimeError, match="Full resolution data already added to this zarr group."
-    ):
-        group.add_full_res_data(
-            arr,
-            n_processes=2,
-            chunk_size=chunk_size,
-            compressor="default",
-        )
 
     assert group.levels == [0]
-    zarr_arr = zarr.open(tmp_path / "group.zarr" / "0")
+    zarr_arr = zarr.open(zarr_path / "0")
     assert zarr_arr.chunks == (chunk_size, chunk_size, chunk_size)
     assert zarr_arr.shape == arr.shape
     assert zarr_arr.dtype == np.uint16
@@ -96,4 +76,51 @@ def test_file_exists(tmp_path: Path) -> None:
             name="my_zarr_group",
             spatial_unit="centimeter",
             voxel_size=(3, 4, 5),
+        )
+
+
+def test_wrong_chunksize(tmp_path: Path, arr: da.Array) -> None:
+    zarr_path = tmp_path / "group.ome.zarr"
+    group = MultiScaleGroup(
+        tmp_path / zarr_path,
+        name="my_zarr_group",
+        spatial_unit="centimeter",
+        voxel_size=(3, 4, 5),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Input array is must have a chunk size of 1 in the third dimension.",
+    ):
+        group.add_full_res_data(
+            arr.rechunk(chunks=(arr.shape[0], arr.shape[1], 2)),
+            n_processes=2,
+            chunk_size=64,
+            compressor="default",
+        )
+
+
+def test_double_add(tmp_path: Path, arr: da.Array) -> None:
+    zarr_path = tmp_path / "group.ome.zarr"
+    group = MultiScaleGroup(
+        tmp_path / zarr_path,
+        name="my_zarr_group",
+        spatial_unit="centimeter",
+        voxel_size=(3, 4, 5),
+    )
+
+    group.add_full_res_data(
+        arr,
+        n_processes=2,
+        chunk_size=64,
+        compressor="default",
+    )
+    with pytest.raises(
+        RuntimeError, match="Full resolution data already added to this zarr group."
+    ):
+        group.add_full_res_data(
+            arr,
+            n_processes=2,
+            chunk_size=64,
+            compressor="default",
         )
