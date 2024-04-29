@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+from typing import Any
 
 import dask.array as da
 import numcodecs
@@ -10,6 +11,12 @@ import pytest
 import zarr
 
 from stack_to_chunk import MultiScaleGroup, memory_per_process, open_multiscale_group
+
+
+def check_zattrs(zarr_path: Path, expected: dict[str, Any]) -> None:
+    with (zarr_path / ".zattrs").open() as f:
+        data = json.load(f)
+    assert data == expected
 
 
 @pytest.fixture()
@@ -35,17 +42,25 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
     compressor = numcodecs.blosc.Blosc(cname="zstd", clevel=2, shuffle=2)
     chunk_size = 64
 
-    expected_multiscales_keys = [
-        "name",
-        "axes",
-        "version",
-        "datasets",
-        "type",
-        "metadata",
-    ]
-    multiscales = group._group.attrs["multiscales"]
-    assert all(k in multiscales for k in expected_multiscales_keys)
-    assert len(multiscales["datasets"]) == 0
+    check_zattrs(
+        zarr_path,
+        {
+            "multiscales": [
+                {
+                    "axes": [
+                        {"name": "x", "type": "space", "unit": "centimeter"},
+                        {"name": "y", "type": "space", "unit": "centimeter"},
+                        {"name": "z", "type": "space", "unit": "centimeter"},
+                    ],
+                    "datasets": [],
+                    "metadata": {"description": "Downscaled using linear resampling"},
+                    "name": "my_zarr_group",
+                    "type": "linear",
+                    "version": "0.4",
+                }
+            ]
+        },
+    )
 
     assert memory_per_process(arr, chunk_size=chunk_size) == 18282880
     group.add_full_res_data(
@@ -54,10 +69,6 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
         chunk_size=chunk_size,
         compressor=compressor,
     )
-
-    assert len(multiscales["datasets"]) == 1
-    level_0 = multiscales["datasets"][0]
-    assert all(k in level_0 for k in ["path", "coordinateTransformations"])
 
     assert group.levels == [0]
     zarr_arr = zarr.open(zarr_path / "0")
@@ -68,31 +79,32 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
     # Check that data is equal in dask array and zarr array
     np.testing.assert_equal(arr[:], zarr_arr[:])
     # Check metadata
-    with (zarr_path / ".zattrs").open() as f:
-        data = json.load(f)
-    assert data == {
-        "multiscales": [
-            {
-                "axes": [
-                    {"name": "x", "type": "space", "unit": "centimeter"},
-                    {"name": "y", "type": "space", "unit": "centimeter"},
-                    {"name": "z", "type": "space", "unit": "centimeter"},
-                ],
-                "datasets": [
-                    {
-                        "coordinateTransformations": [
-                            {"scale": [3, 4, 5], "type": "scale"}
-                        ],
-                        "path": "0",
-                    }
-                ],
-                "metadata": {"description": "Downscaled using linear resampling"},
-                "name": "my_zarr_group",
-                "type": "linear",
-                "version": "0.4",
-            }
-        ]
-    }
+    check_zattrs(
+        zarr_path,
+        {
+            "multiscales": [
+                {
+                    "axes": [
+                        {"name": "x", "type": "space", "unit": "centimeter"},
+                        {"name": "y", "type": "space", "unit": "centimeter"},
+                        {"name": "z", "type": "space", "unit": "centimeter"},
+                    ],
+                    "datasets": [
+                        {
+                            "coordinateTransformations": [
+                                {"scale": [3, 4, 5], "type": "scale"}
+                            ],
+                            "path": "0",
+                        }
+                    ],
+                    "metadata": {"description": "Downscaled using linear resampling"},
+                    "name": "my_zarr_group",
+                    "type": "linear",
+                    "version": "0.4",
+                }
+            ]
+        },
+    )
 
     with (zarr_path / ".zgroup").open() as f:
         data = json.load(f)

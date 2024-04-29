@@ -181,18 +181,6 @@ class MultiScaleGroup:
         self._add_level_metadata(0)
         logger.info("Finished full resolution copy to zarr.")
 
-        multiscales = self._group.attrs["multiscales"]
-        multiscales[0]["datasets"].append(
-            {
-                "path": "0",
-                "coordinateTransformations": [
-                    {"type": "scale", "scale": list(self._voxel_size)}
-                ],
-            }
-        )
-
-        self._group.attrs["multiscales"] = multiscales
-
     def add_downsample_level(self, level: int) -> None:
         """
         Add a level of downsampling.
@@ -256,11 +244,14 @@ class MultiScaleGroup:
             ],
         }
 
-        multiscales = self._group.attrs["multiscales"]
+        multiscales = self._group.attrs["multiscales"][0]
         existing_dataset_paths = [d["path"] for d in multiscales["datasets"]]
-        if new_dataset["path"] not in existing_dataset_paths:
-            multiscales["datasets"].append(new_dataset)
-        self._group.attrs["multiscales"] = multiscales
+        if new_dataset["path"] in existing_dataset_paths:
+            msg = f"Level {level} already in multiscales metadata"
+            raise RuntimeError(msg)
+
+        multiscales["datasets"].append(new_dataset)
+        self._group.attrs["multiscales"] = [multiscales]
 
 
 def open_multiscale_group(path: Path) -> MultiScaleGroup:
