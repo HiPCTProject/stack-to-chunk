@@ -7,15 +7,14 @@ from pathlib import Path
 from typing import Any, Literal
 
 import dask.array as da
-import numpy as np
 import zarr
 from dask.array.core import Array
 from loguru import logger
 from numcodecs import blosc
 from numcodecs.abc import Codec
-from ome_zarr.dask_utils import resize
 
 from stack_to_chunk._array_helpers import _copy_slab
+from stack_to_chunk.downsample import downsample_by_two
 from stack_to_chunk.ome_ngff import SPATIAL_UNIT
 
 
@@ -218,14 +217,9 @@ class MultiScaleGroup:
         # Get the source data from the level below as a dask array
         source_store = self._group[level_minus_one]
         source_data = da.from_zarr(source_store, chunks=source_store.chunks)
-        new_shape = np.ceil(np.array(source_data.shape) / 2).astype(int)  # round up
 
         # Linearly downsample the data by a factor of 2 in each dimension
-        new_data = resize(  # dask-ified wrapper around skimage.transform.resize
-            source_data,
-            output_shape=new_shape,
-            order=1,
-        )
+        new_data = downsample_by_two(source_data)
         logger.info(
             f"Generated level {level_str} array with shape {new_data.shape} "
             f"and chunk sizes {new_data.chunksize}, using linear interpolation."

@@ -120,7 +120,9 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
 
     # The downsampled array should be equal to the original array downsampled
     # directly with skimage.transform.resize (without chunking/parallelism)
-    directly_downsampled = resize(arr, shape_1, order=1).astype(np.uint16)
+    directly_downsampled = resize(arr, shape_1, order=1, anti_aliasing=False).astype(
+        np.uint16
+    )
     np.testing.assert_allclose(directly_downsampled[:], zarr_arr_1[:])
 
     with pytest.raises(RuntimeError, match="Level 1 already found in zarr group"):
