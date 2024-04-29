@@ -65,7 +65,7 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
                 "datasets": [
                     {
                         "coordinateTransformations": [
-                            {"scale": [1, 1, 1], "type": "scale"}
+                            {"scale": [3, 4, 5], "type": "scale"}
                         ],
                         "path": "0",
                     }

@@ -184,7 +184,9 @@ class MultiScaleGroup:
         multiscales[0]["datasets"].append(
             {
                 "path": "0",
-                "coordinateTransformations": [{"type": "scale", "scale": [1, 1, 1]}],
+                "coordinateTransformations": [
+                    {"type": "scale", "scale": list(self._voxel_size)}
+                ],
             }
         )
 
