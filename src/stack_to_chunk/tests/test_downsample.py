@@ -23,7 +23,7 @@ class TestDownsample:
         low=0, high=2**16, dtype=np.uint16, size=image_shape
     )
 
-    @pytest.mark.parametrize(  # type: ignore[misc]
+    @pytest.mark.parametrize(
         "chunksize",
         [
             (64, 64, 64),
