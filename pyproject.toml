@@ -16,6 +16,7 @@ classifiers = [
 dependencies = [
     "dask",
     "loguru",
+    "scikit-image",
     "zarr",
 ]
 description = "Convert stacks of images to chunked datasets"
