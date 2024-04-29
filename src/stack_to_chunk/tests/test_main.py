@@ -11,7 +11,14 @@ import zarr
 from stack_to_chunk import MultiScaleGroup, memory_per_process
 
 
-def test_workflow(tmp_path: Path) -> None:
+@pytest.fixture()
+def arr() -> da.Array:
+    shape = (583, 245, 156)
+    arr = da.random.randint(low=0, high=2**16, dtype=np.uint16, size=shape)
+    return arr.rechunk(chunks=(shape[0], shape[1], 1))
+
+
+def test_workflow(tmp_path: Path, arr: da.Array) -> None:
     """Basic smoke test of the workflow as a user would use it."""
     zarr_path = tmp_path / "group.ome.zarr"
     group = MultiScaleGroup(
@@ -21,22 +28,18 @@ def test_workflow(tmp_path: Path) -> None:
         voxel_size=(3, 4, 5),
     )
 
-    assert (zarr_path).exists()
+    assert zarr_path.exists()
     assert group.levels == []
 
-    chunk_size = 64
-    shape = (583, 245, 156)
-    arr = da.random.randint(low=0, high=2**16, dtype=np.uint16, size=shape)
-    arr = arr.rechunk(chunks=(shape[0], shape[1], 1))
-
     compressor = numcodecs.blosc.Blosc(cname="zstd", clevel=2, shuffle=2)
+    chunk_size = 64
 
     with pytest.raises(
         ValueError,
         match="Input array is must have a chunk size of 1 in the third dimension.",
     ):
         group.add_full_res_data(
-            arr.rechunk(chunks=(shape[0], shape[1], 2)),
+            arr.rechunk(chunks=(arr.shape[0], arr.shape[1], 2)),
             n_processes=2,
             chunk_size=chunk_size,
             compressor=compressor,
@@ -62,7 +65,7 @@ def test_workflow(tmp_path: Path) -> None:
     assert group.levels == [0]
     zarr_arr = zarr.open(tmp_path / "group.zarr" / "0")
     assert zarr_arr.chunks == (chunk_size, chunk_size, chunk_size)
-    assert zarr_arr.shape == shape
+    assert zarr_arr.shape == arr.shape
     assert zarr_arr.dtype == np.uint16
     assert zarr_arr.compressor == compressor
 
