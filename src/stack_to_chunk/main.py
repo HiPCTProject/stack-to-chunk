@@ -180,6 +180,17 @@ class MultiScaleGroup:
         blosc.use_threads = blosc_use_threads
         logger.info("Finished full resolution copy to zarr.")
 
+        multiscales = self._group.attrs["multiscales"]
+        multiscales[0]["datasets"].append(
+                {
+                    "path": "0",
+                    "coordinateTransformations": [{"type": "scale", "scale": [1, 1, 1]}],
+                }
+            )
+
+        self._group.attrs["multiscales"]= multiscales
+
+
     def add_downsample_level(self, level: int) -> None:
         """
         Add a level of downsampling.

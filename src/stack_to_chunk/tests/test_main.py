@@ -49,21 +49,8 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
     assert zarr_arr.shape == arr.shape
     assert zarr_arr.dtype == np.uint16
     assert zarr_arr.compressor == compressor
-
-    # Check that trying to add data again fails
-    with pytest.raises(
-        RuntimeError, match="Full resolution data already added to this zarr group."
-    ):
-        group.add_full_res_data(
-            arr,
-            n_processes=2,
-            chunk_size=64,
-            compressor="default",
-        )
-
     # Check that data is equal in dask array and zarr array
     np.testing.assert_equal(arr[:], zarr_arr[:])
-
     # Check metadata
     with (zarr_path / ".zattrs").open() as f:
         data = json.load(f)
@@ -75,7 +62,14 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
                     {"name": "y", "type": "space", "unit": "centimeter"},
                     {"name": "z", "type": "space", "unit": "centimeter"},
                 ],
-                "datasets": [],
+                "datasets": [
+                    {
+                        "coordinateTransformations": [
+                            {"scale": [1, 1, 1], "type": "scale"}
+                        ],
+                        "path": "0",
+                    }
+                ],
                 "metadata": {"description": "Downscaled using linear resampling"},
                 "name": "my_zarr_group",
                 "type": "linear",
@@ -87,6 +81,17 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
     with (zarr_path / ".zgroup").open() as f:
         data = json.load(f)
     assert data == {"zarr_format": 2}
+
+    # Check that trying to add data again fails
+    with pytest.raises(
+        RuntimeError, match="Full resolution data already added to this zarr group."
+    ):
+        group.add_full_res_data(
+            arr,
+            n_processes=2,
+            chunk_size=64,
+            compressor="default",
+        )
 
     group.add_downsample_level(1)
     assert group.levels == [0, 1]
