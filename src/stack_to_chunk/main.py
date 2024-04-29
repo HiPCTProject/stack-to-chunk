@@ -178,19 +178,8 @@ class MultiScaleGroup:
             p.join()
 
         blosc.use_threads = blosc_use_threads
+        self._add_level_metadata(0)
         logger.info("Finished full resolution copy to zarr.")
-
-        multiscales = self._group.attrs["multiscales"]
-        multiscales[0]["datasets"].append(
-            {
-                "path": "0",
-                "coordinateTransformations": [
-                    {"type": "scale", "scale": list(self._voxel_size)}
-                ],
-            }
-        )
-
-        self._group.attrs["multiscales"] = multiscales
 
     def add_downsample_level(self, level: int) -> None:
         """
@@ -232,6 +221,37 @@ class MultiScaleGroup:
             dtype=source_data.dtype,
             compressor=source_data.compressor,
         )
+
+    def _add_level_metadata(self, level: int = 0) -> None:
+        """
+        Add the required multiscale metadata for the corresponding level.
+
+        Parameters
+        ----------
+        level :
+            Level of downsampling. Level 0 corresponds to full resolution data.
+
+        """
+        # we assume that the scale factor is always 2 in each dimension
+        scale_factors = [float(s * 2**level) for s in self._voxel_size]
+        new_dataset = {
+            "path": str(level),
+            "coordinateTransformations": [
+                {
+                    "type": "scale",
+                    "scale": scale_factors,
+                }
+            ],
+        }
+
+        multiscales = self._group.attrs["multiscales"][0]
+        existing_dataset_paths = [d["path"] for d in multiscales["datasets"]]
+        if new_dataset["path"] in existing_dataset_paths:
+            msg = f"Level {level} already in multiscales metadata"
+            raise RuntimeError(msg)
+
+        multiscales["datasets"].append(new_dataset)
+        self._group.attrs["multiscales"] = [multiscales]
 
 
 def open_multiscale_group(path: Path) -> MultiScaleGroup:
