@@ -1,5 +1,6 @@
 """Main functionality tests."""
 
+import json
 from pathlib import Path
 
 import dask.array as da
@@ -51,6 +52,28 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
 
     # Check that data is equal in dask array and zarr array
     np.testing.assert_equal(arr[:], zarr_arr[:])
+
+    # Check metadata
+    with (zarr_path / ".zattrs").open() as f:
+        data = json.load(f)
+    assert data == {
+        "multiscales": {
+            "axes": [
+                {"name": "z", "type": "space", "unit": "centimeter"},
+                {"name": "y", "type": "space", "unit": "centimeter"},
+                {"name": "x", "type": "space", "unit": "centimeter"},
+            ],
+            "datasets": [],
+            "metadata": {"description": "Downscaled using linear resampling"},
+            "name": "my_zarr_group",
+            "type": "linear",
+            "version": "0.4",
+        }
+    }
+
+    with (zarr_path / ".zgroup").open() as f:
+        data = json.load(f)
+    assert data == {"zarr_format": 2}
 
     group.add_downsample_level(1)
     assert group.levels == [0, 1]
