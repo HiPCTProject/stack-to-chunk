@@ -54,15 +54,15 @@ class MultiScaleGroup:
         voxel_size: tuple[float, float, float],
         spatial_unit: SPATIAL_UNIT,
     ) -> None:
-        if path.exists():
-            msg = f"{path} already exists"
-            raise FileExistsError(msg)
         self._path = path
         self._name = name
         self._spatial_unit = spatial_unit
         self._voxel_size = voxel_size
 
-        self._create_zarr_group()
+        if not path.exists():
+            self._create_zarr_group()
+
+        self._group = zarr.open_group(store=self._path, mode="r+")
 
     def _create_zarr_group(self) -> None:
         """
@@ -184,7 +184,9 @@ class MultiScaleGroup:
         multiscales[0]["datasets"].append(
             {
                 "path": "0",
-                "coordinateTransformations": [{"type": "scale", "scale": list(self._voxel_size)}],
+                "coordinateTransformations": [
+                    {"type": "scale", "scale": list(self._voxel_size)}
+                ],
             }
         )
 
@@ -230,3 +232,24 @@ class MultiScaleGroup:
             dtype=source_data.dtype,
             compressor=source_data.compressor,
         )
+
+
+def open_multiscale_group(path: Path) -> MultiScaleGroup:
+    """
+    Open a previously created multiscale zarr group.
+
+    Parameters
+    ----------
+    path :
+        Path to existing group.
+
+    """
+    group = zarr.open_group(store=path, mode="r")
+    multiscales = group.attrs["multiscales"][0]
+    name = multiscales["name"]
+    voxel_size = multiscales["datasets"][0]["coordinateTransformations"][0]["scale"]
+    spatial_unit = multiscales["axes"][0]["unit"]
+
+    return MultiScaleGroup(
+        path, name=name, voxel_size=voxel_size, spatial_unit=spatial_unit
+    )

@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 import zarr
 
-from stack_to_chunk import MultiScaleGroup, memory_per_process
+from stack_to_chunk import MultiScaleGroup, memory_per_process, open_multiscale_group
 
 
 @pytest.fixture()
@@ -93,6 +93,11 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
             compressor="default",
         )
 
+    # Check that re-loading works
+    del group
+    group = open_multiscale_group(zarr_path)
+    assert group.levels == [0]
+
     group.add_downsample_level(1)
     assert group.levels == [0, 1]
 
@@ -106,18 +111,6 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
         group.add_downsample_level(0.1)  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="level must be an integer >= 1"):
         group.add_downsample_level(-2)
-
-
-def test_file_exists(tmp_path: Path) -> None:
-    path = tmp_path / "group.zarr"
-    path.mkdir()
-    with pytest.raises(FileExistsError, match=r".group\.zarr already exists"):
-        MultiScaleGroup(
-            tmp_path / "group.zarr",
-            name="my_zarr_group",
-            spatial_unit="centimeter",
-            voxel_size=(3, 4, 5),
-        )
 
 
 def test_wrong_chunksize(tmp_path: Path, arr: da.Array) -> None:
