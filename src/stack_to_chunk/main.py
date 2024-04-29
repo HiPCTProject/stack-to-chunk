@@ -182,14 +182,13 @@ class MultiScaleGroup:
 
         multiscales = self._group.attrs["multiscales"]
         multiscales[0]["datasets"].append(
-                {
-                    "path": "0",
-                    "coordinateTransformations": [{"type": "scale", "scale": [1, 1, 1]}],
-                }
-            )
+            {
+                "path": "0",
+                "coordinateTransformations": [{"type": "scale", "scale": [1, 1, 1]}],
+            }
+        )
 
-        self._group.attrs["multiscales"]= multiscales
-
+        self._group.attrs["multiscales"] = multiscales
 
     def add_downsample_level(self, level: int) -> None:
         """
