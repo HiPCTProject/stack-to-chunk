@@ -79,9 +79,12 @@ class MultiScaleGroup:
             {"name": "y", "type": "space", "unit": self._spatial_unit},
             {"name": "z", "type": "space", "unit": self._spatial_unit},
         ]
-        multiscales["type"] = "linear"
+        multiscales["type"] = "local mean"
         multiscales["metadata"] = {
-            "description": "Downscaled using linear resampling",
+            "description": "Downscaled using local mean in 2x2x2 blocks.",
+            "method": "skimage.measure.block_reduce",
+            "version": "0.22.0",
+            "kwargs": {"block_size": 2, "func": "np.mean"},
         }
 
         multiscales["datasets"] = []
@@ -102,7 +105,8 @@ class MultiScaleGroup:
         Get zarr Array for a  given level.
         """
         if level not in self.levels:
-            raise ValueError(f"Given level {level} not in added levels {self.levels}")
+            msg = f"Given level {level} not in added levels {self.levels}"
+            raise ValueError(msg)
 
         return self._group[str(level)]
 

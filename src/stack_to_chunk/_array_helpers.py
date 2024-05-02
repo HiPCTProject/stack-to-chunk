@@ -1,5 +1,6 @@
 import dask.array as da
 import numpy as np
+import skimage.measure
 import zarr
 from loguru import logger
 
@@ -52,9 +53,7 @@ def _downsample_block(
     pads = np.array(data.shape) % 2
     pad_width = [(0, p) for p in pads]
     data = np.pad(data, pad_width, mode="edge")
-
-    # Take mean
-    data = (data[::2, ::2, ::2] + data[1::2, 1::2, 1::2]) / 2
+    data = skimage.measure.block_reduce(data, block_size=2, func=np.mean)
 
     block_idx_out = np.array(block_idx) // 2
     chunk_size_out = chunk_size // 2
