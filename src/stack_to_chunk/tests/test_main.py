@@ -140,6 +140,44 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
     group.add_downsample_level(1, n_processes=2)
     assert group.levels == [0, 1]
 
+    check_zattrs(
+        zarr_path,
+        {
+            "multiscales": [
+                {
+                    "axes": [
+                        {"name": "x", "type": "space", "unit": "centimeter"},
+                        {"name": "y", "type": "space", "unit": "centimeter"},
+                        {"name": "z", "type": "space", "unit": "centimeter"},
+                    ],
+                    "datasets": [
+                        {
+                            "coordinateTransformations": [
+                                {"scale": [3.0, 4.0, 5.0], "type": "scale"}
+                            ],
+                            "path": "0",
+                        },
+                        {
+                            "coordinateTransformations": [
+                                {"scale": [6.0, 8.0, 10.0], "type": "scale"}
+                            ],
+                            "path": "1",
+                        },
+                    ],
+                    "metadata": {
+                        "description": "Downscaled using local mean in 2x2x2 blocks.",
+                        "kwargs": {"block_size": 2, "func": "np.mean"},
+                        "method": "skimage.measure.block_reduce",
+                        "version": "0.22.0",
+                    },
+                    "name": "my_zarr_group",
+                    "type": "local mean",
+                    "version": "0.4",
+                }
+            ]
+        },
+    )
+
     with pytest.raises(RuntimeError, match="Level 1 already found in zarr group"):
         group.add_downsample_level(1, n_processes=2)
     with pytest.raises(

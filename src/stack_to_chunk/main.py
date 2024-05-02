@@ -305,6 +305,7 @@ class MultiScaleGroup:
             p.close()
             p.join()
 
+        self._add_level_metadata(level)
         blosc.use_threads = blosc_use_threads
         logger.info(f"Finished downsampling from level {level_minus_one} > {level}")
 
