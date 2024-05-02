@@ -105,11 +105,17 @@ group.add_full_res_data(images, n_processes=1)
 print(group.levels)
 
 # %%
-# Now lets add a downsampling level:
+# Now lets add some downsampling levels:
 group.add_downsample_level(1, n_processes=1)
+group.add_downsample_level(2, n_processes=1)
+group.add_downsample_level(3, n_processes=1)
 print(group.levels)
 
-plt.imshow(group[1][:, :, 0], cmap="gray")
+# %%
+# The downsampled data can be accessed as `zarr.Array` objects by indexing
+# ``group``. As an example, lets plot the third downsampled level:
+
+plt.imshow(group[3][:, :, 0], cmap="gray")
 
 # %%
 # Cleanup
