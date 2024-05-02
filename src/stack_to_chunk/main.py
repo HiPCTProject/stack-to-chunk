@@ -283,11 +283,12 @@ class MultiScaleGroup:
             compressor=source_arr.compressor,
         )
 
-        block_indices = []
-        for x in range(0, source_arr.shape[0], chunk_size * 2):
-            for y in range(0, source_arr.shape[1], chunk_size * 2):
-                for z in range(0, source_arr.shape[2], chunk_size * 2):
-                    block_indices.append((x, y, z))
+        block_indices = [
+            (x, y, z)
+            for x in range(0, source_arr.shape[0], chunk_size * 2)
+            for y in range(0, source_arr.shape[1], chunk_size * 2)
+            for z in range(0, source_arr.shape[2], chunk_size * 2)
+        ]
 
         all_args = [(source_arr, sink_arr, idxs) for idxs in block_indices]
 

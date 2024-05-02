@@ -49,6 +49,7 @@ def _downsample_block(
         Output array. Must have the same chunk shape as `arr_in`.
     block_idx :
         Index of block to copy. Must be a multiple of swice the chunk size of `arr_in`.
+
     """
     chunk_size = arr_in.chunks[0] * 2
     np.testing.assert_equal(
