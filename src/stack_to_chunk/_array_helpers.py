@@ -36,6 +36,19 @@ def _downsample_block(
 ) -> None:
     """
     Copy a single block from one array to the next, downsampling by a factor of two.
+
+    Data is copied from a block starting at `block_idx` and ending at
+    `block_idx + 2 * arr_in.chunks`, ie a cube of (2, 2, 2) chunks.
+    Data is downsampled using local mean, and writen to a single chunk in `arr_out`.
+
+    Parameters
+    ----------
+    arr_in :
+        Input array.
+    arr_out :
+        Output array. Must have the same chunk shape as `arr_in`.
+    block_idx :
+        Index of block to copy. Must be a multiple of swice the chunk size of `arr_in`.
     """
     chunk_size = arr_in.chunks[0] * 2
     np.testing.assert_equal(
