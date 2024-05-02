@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import numpy as np
+import tqdm
 import zarr
 from dask.array.core import Array
 from loguru import logger
@@ -299,7 +300,7 @@ class MultiScaleGroup:
         # Use try/finally pattern to allow code coverage to be collected
         p = Pool(n_processes)
         try:
-            p.starmap(_downsample_block, all_args)
+            p.starmap(_downsample_block, tqdm.tqdm(all_args, total=len(all_args)))
         finally:
             p.close()
             p.join()
