@@ -170,3 +170,6 @@ src/stack_to_chunk/_version.py
 
 docs/auto_examples
 docs/sg_execution_times.rst
+
+memray*.bin
+benchmarks/data
