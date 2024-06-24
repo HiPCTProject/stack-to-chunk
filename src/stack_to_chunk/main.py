@@ -129,6 +129,7 @@ class MultiScaleGroup:
             dtype=data.dtype,
             compressor=compressor,
         )
+        self._add_level_metadata(0)
 
     def add_full_res_data(
         self,
@@ -222,7 +223,6 @@ class MultiScaleGroup:
                 p.join()
 
         blosc.use_threads = blosc_use_threads
-        self._add_level_metadata(0)
         logger.info("Finished full resolution copy to zarr.")
 
     def add_downsample_level(self, level: int) -> None:
