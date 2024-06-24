@@ -97,13 +97,45 @@ class MultiScaleGroup:
         """
         return [int(k) for k in self._group]
 
+    def create_initial_dataset(
+        self, data: Array, *, chunk_size: int, compressor: Literal["default"] | Codec
+    ) -> None:
+        """
+        Set up the inital full-resolution dataset.
+
+        Parameters
+        ----------
+        data :
+            Full input data. Must be 3D, and have a chunksize of ``(nx, ny, 1)``, where
+            ``(nx, ny)`` is the shape of the input 2D slices.
+        chunk_size :
+            Size of chunks in output zarr dataset.
+        compressor :
+            Compressor to use when writing data to zarr dataset.
+
+        Raises
+        ------
+        RuntimeError :
+            If full resolution dataset has already been created.
+
+        """
+        if "0" in self._group:
+            msg = "Full resolution dataset already set up."
+            raise RuntimeError(msg)
+        self._group.create_dataset(
+            name="0",
+            shape=data.shape,
+            chunks=(chunk_size, chunk_size, chunk_size),
+            dtype=data.dtype,
+            compressor=compressor,
+        )
+
     def add_full_res_data(
         self,
         data: Array,
         *,
-        chunk_size: int,
-        compressor: Literal["default"] | Codec,
         n_processes: int,
+        start_z_idx: int = 0,
     ) -> None:
         """
         Add the 'original' full resolution data to this group.
@@ -113,25 +145,36 @@ class MultiScaleGroup:
         data :
             Input data. Must be 3D, and have a chunksize of ``(nx, ny, 1)``, where
             ``(nx, ny)`` is the shape of the input 2D slices.
-
-        chunk_size :
-            Size of chunks in output zarr dataset.
-        compressor :
-            Compressor to use when writing data to zarr dataset.
         n_processes :
             Number of parallel processes to use to read/write data.
+        start_z_idx :
+            z-index at which this stack of data starts. Can be useful to write
+            multiple slabs in parallel using a compute cluster where the job wants
+            to be split into many small individual Python processes.
 
-        Raises
-        ------
-        RuntimeError :
-            If full resolution data have already been added.
+        Notes
+        -----
+        Make sure create_initial_dataset has been run first to set up the
+        zarr dataset.
 
         """
-        if "0" in self._group:
-            msg = "Full resolution data already added to this zarr group."
+        if "0" not in self._group:
+            msg = (
+                "Full resolution dataset not present. "
+                "Run `create_initial_datset()` first."
+            )
             raise RuntimeError(msg)
 
+        chunk_size: int = self._group["0"].chunks[0]
+
         assert data.ndim == 3, "Input array is not 3-dimensional"
+        if start_z_idx % chunk_size != 0:
+            msg = (
+                f"start_z_idx ({start_z_idx}) is not a multiple "
+                f"of chunk_size ({chunk_size})"
+            )
+            raise ValueError(msg)
+
         if data.chunksize[2] != 1:
             msg = (
                 f"Input array is must have a chunk size of 1 in the third dimension. "
@@ -148,20 +191,17 @@ class MultiScaleGroup:
             f"Each process will read ~{slab_size_bytes / 1e6:.02f} MB into memory"
         )
 
-        self._group.create_dataset(
-            name="0",
-            shape=data.shape,
-            chunks=(chunk_size, chunk_size, chunk_size),
-            dtype=data.dtype,
-            compressor=compressor,
-        )
-
         nz = data.shape[2]
         slab_idxs: list[tuple[int, int]] = [
             (z, min(z + chunk_size, nz)) for z in range(0, nz, chunk_size)
         ]
         all_args = [
-            (self._group["0"], data[:, :, zmin:zmax], zmin, zmax)
+            (
+                self._group["0"],
+                data[:, :, zmin:zmax],
+                zmin + start_z_idx,
+                zmax + start_z_idx,
+            )
             for (zmin, zmax) in slab_idxs
         ]
 
@@ -170,12 +210,16 @@ class MultiScaleGroup:
         blosc.use_threads = 0
 
         # Use try/finally pattern to allow code coverage to be collected
-        p = Pool(n_processes)
-        try:
-            p.starmap(_copy_slab, all_args)
-        finally:
-            p.close()
-            p.join()
+        if n_processes == 1:
+            for args in all_args:
+                _copy_slab(*args)
+        else:
+            p = Pool(n_processes)
+            try:
+                p.starmap(_copy_slab, all_args)
+            finally:
+                p.close()
+                p.join()
 
         blosc.use_threads = blosc_use_threads
         self._add_level_metadata(0)
@@ -247,8 +291,7 @@ class MultiScaleGroup:
         multiscales = self._group.attrs["multiscales"][0]
         existing_dataset_paths = [d["path"] for d in multiscales["datasets"]]
         if new_dataset["path"] in existing_dataset_paths:
-            msg = f"Level {level} already in multiscales metadata"
-            raise RuntimeError(msg)
+            return
 
         multiscales["datasets"].append(new_dataset)
         self._group.attrs["multiscales"] = [multiscales]
