@@ -95,7 +95,8 @@ logger.add(sys.stdout, level="INFO")
 # %%
 # And finally, lets create our first data copy:
 
-group.add_full_res_data(images, chunk_size=16, compressor="default", n_processes=1)
+group.create_initial_dataset(images, chunk_size=16, compressor="default")
+group.add_full_res_data(images, n_processes=1)
 
 
 # %%

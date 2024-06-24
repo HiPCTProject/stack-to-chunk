@@ -1,6 +1,7 @@
 """Main functionality tests."""
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,47 @@ def check_zattrs(zarr_path: Path, expected: dict[str, Any]) -> None:
     with (zarr_path / ".zattrs").open() as f:
         data = json.load(f)
     assert data == expected
+
+
+def check_full_res_copy(zarr_path: Path, group: zarr.Group, arr: da.Array) -> None:
+    """
+    Check various array properties after a full resolution copy.
+    """
+    assert group.levels == [0]
+    zarr_arr = zarr.open(zarr_path / "0")
+    # Check that data is equal in dask array and zarr array
+    np.testing.assert_equal(arr[:], zarr_arr[:])
+    # Check metadata
+    check_zattrs(
+        zarr_path,
+        {
+            "multiscales": [
+                {
+                    "axes": [
+                        {"name": "x", "type": "space", "unit": "centimeter"},
+                        {"name": "y", "type": "space", "unit": "centimeter"},
+                        {"name": "z", "type": "space", "unit": "centimeter"},
+                    ],
+                    "datasets": [
+                        {
+                            "coordinateTransformations": [
+                                {"scale": [3, 4, 5], "type": "scale"}
+                            ],
+                            "path": "0",
+                        }
+                    ],
+                    "metadata": {"description": "Downscaled using linear resampling"},
+                    "name": "my_zarr_group",
+                    "type": "linear",
+                    "version": "0.4",
+                }
+            ]
+        },
+    )
+
+    with (zarr_path / ".zgroup").open() as f:
+        data = json.load(f)
+    assert data == {"zarr_format": 2}
 
 
 @pytest.fixture()
@@ -63,63 +105,22 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
     )
 
     assert memory_per_process(arr, chunk_size=chunk_size) == 18282880
-    group.add_full_res_data(
-        arr,
-        n_processes=2,
+    group.create_initial_dataset(
+        data=arr,
         chunk_size=chunk_size,
         compressor=compressor,
     )
+    group.add_full_res_data(
+        arr,
+        n_processes=1,
+    )
 
-    assert group.levels == [0]
     zarr_arr = zarr.open(zarr_path / "0")
     assert zarr_arr.chunks == (chunk_size, chunk_size, chunk_size)
     assert zarr_arr.shape == arr.shape
     assert zarr_arr.dtype == np.uint16
     assert zarr_arr.compressor == compressor
-    # Check that data is equal in dask array and zarr array
-    np.testing.assert_equal(arr[:], zarr_arr[:])
-    # Check metadata
-    check_zattrs(
-        zarr_path,
-        {
-            "multiscales": [
-                {
-                    "axes": [
-                        {"name": "x", "type": "space", "unit": "centimeter"},
-                        {"name": "y", "type": "space", "unit": "centimeter"},
-                        {"name": "z", "type": "space", "unit": "centimeter"},
-                    ],
-                    "datasets": [
-                        {
-                            "coordinateTransformations": [
-                                {"scale": [3, 4, 5], "type": "scale"}
-                            ],
-                            "path": "0",
-                        }
-                    ],
-                    "metadata": {"description": "Downscaled using linear resampling"},
-                    "name": "my_zarr_group",
-                    "type": "linear",
-                    "version": "0.4",
-                }
-            ]
-        },
-    )
-
-    with (zarr_path / ".zgroup").open() as f:
-        data = json.load(f)
-    assert data == {"zarr_format": 2}
-
-    # Check that trying to add data again fails
-    with pytest.raises(
-        RuntimeError, match="Full resolution data already added to this zarr group."
-    ):
-        group.add_full_res_data(
-            arr,
-            n_processes=2,
-            chunk_size=64,
-            compressor="default",
-        )
+    check_full_res_copy(zarr_path, group, arr)
 
     # Check that re-loading works
     del group
@@ -141,6 +142,49 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
         group.add_downsample_level(-2)
 
 
+def test_parallel_copy(tmp_path: Path, arr: da.Array) -> None:
+    """
+    Test running several slab copies one after another.
+
+    Simulates what happens on a compute cluster.
+    """
+    zarr_path = tmp_path / "group.ome.zarr"
+    group = MultiScaleGroup(
+        tmp_path / zarr_path,
+        name="my_zarr_group",
+        spatial_unit="centimeter",
+        voxel_size=(3, 4, 5),
+    )
+    compressor = numcodecs.blosc.Blosc(cname="zstd", clevel=2, shuffle=2)
+    chunk_size = 64
+    group.create_initial_dataset(
+        data=arr,
+        chunk_size=chunk_size,
+        compressor=compressor,
+    )
+    group.add_full_res_data(
+        arr[:, :, :64],
+        n_processes=1,
+        start_z_idx=0,
+    )
+    with pytest.raises(
+        ValueError,
+        match=re.escape("start_z_idx (2) is not a multiple of chunk_size (64)"),
+    ):
+        group.add_full_res_data(
+            arr[:64],
+            n_processes=1,
+            start_z_idx=2,
+        )
+    group.add_full_res_data(
+        arr[:, :, 64:],
+        n_processes=1,
+        start_z_idx=64,
+    )
+
+    check_full_res_copy(zarr_path, group, arr)
+
+
 def test_wrong_chunksize(tmp_path: Path, arr: da.Array) -> None:
     zarr_path = tmp_path / "group.ome.zarr"
     group = MultiScaleGroup(
@@ -149,6 +193,11 @@ def test_wrong_chunksize(tmp_path: Path, arr: da.Array) -> None:
         spatial_unit="centimeter",
         voxel_size=(3, 4, 5),
     )
+    group.create_initial_dataset(
+        data=arr,
+        chunk_size=64,
+        compressor="default",
+    )
 
     with pytest.raises(
         ValueError,
@@ -156,7 +205,5 @@ def test_wrong_chunksize(tmp_path: Path, arr: da.Array) -> None:
     ):
         group.add_full_res_data(
             arr.rechunk(chunks=(arr.shape[0], arr.shape[1], 2)),
-            n_processes=2,
-            chunk_size=64,
-            compressor="default",
+            n_processes=1,
         )
