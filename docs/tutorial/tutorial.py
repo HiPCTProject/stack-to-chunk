@@ -32,7 +32,7 @@ slice_dir = temp_dir_path / "slices"
 slice_dir.mkdir()
 
 for i in range(35):
-    tifffile.imwrite(slice_dir / f"{str(i).zfill(3)}.tif", data_2d)
+    tifffile.imwrite(slice_dir / f"{str(i).zfill(3)}.tif", data_2d.T)
 
 plt.imshow(data_2d, cmap="gray")
 
@@ -98,12 +98,24 @@ logger.add(sys.stdout, level="INFO")
 group.create_initial_dataset(images, chunk_size=16, compressor="default")
 group.add_full_res_data(images, n_processes=1)
 
-
 # %%
 # The levels property can be inspected to show we've added the first level. Ekach level
 # is downsampled by a factor of ``2**level``, so level 0 is downsampled by a factor of
 # 1, which is just a copy of the original data (as expected).
 print(group.levels)
+
+# %%
+# Now lets add some downsampling levels:
+group.add_downsample_level(1, n_processes=1)
+group.add_downsample_level(2, n_processes=1)
+group.add_downsample_level(3, n_processes=1)
+print(group.levels)
+
+# %%
+# The downsampled data can be accessed as `zarr.Array` objects by indexing
+# ``group``. As an example, lets plot the third downsampled level:
+
+plt.imshow(group[3][:, :, 0], cmap="gray")
 
 # %%
 # Cleanup
