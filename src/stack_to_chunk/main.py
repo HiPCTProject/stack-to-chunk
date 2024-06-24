@@ -84,7 +84,7 @@ class MultiScaleGroup:
         multiscales["metadata"] = {
             "description": "Downscaled using local mean in 2x2x2 blocks.",
             "method": "skimage.measure.block_reduce",
-            "version": "0.22.0",
+            "version": "0.24.0",
             "kwargs": {"block_size": 2, "func": "np.mean"},
         }
 
