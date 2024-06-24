@@ -13,6 +13,23 @@ from dask.delayed import Delayed
 
 from stack_to_chunk import MultiScaleGroup, memory_per_process, open_multiscale_group
 
+INITIAL_ATTRS = {
+    "multiscales": [
+        {
+            "axes": [
+                {"name": "x", "type": "space", "unit": "centimeter"},
+                {"name": "y", "type": "space", "unit": "centimeter"},
+                {"name": "z", "type": "space", "unit": "centimeter"},
+            ],
+            "datasets": [],
+            "metadata": {"description": "Downscaled using linear resampling"},
+            "name": "my_zarr_group",
+            "type": "linear",
+            "version": "0.4",
+        }
+    ]
+}
+
 
 def check_zattrs(zarr_path: Path, expected: dict[str, Any]) -> None:
     with (zarr_path / ".zattrs").open() as f:
@@ -43,25 +60,7 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
     compressor = numcodecs.blosc.Blosc(cname="zstd", clevel=2, shuffle=2)
     chunk_size = 64
 
-    check_zattrs(
-        zarr_path,
-        {
-            "multiscales": [
-                {
-                    "axes": [
-                        {"name": "x", "type": "space", "unit": "centimeter"},
-                        {"name": "y", "type": "space", "unit": "centimeter"},
-                        {"name": "z", "type": "space", "unit": "centimeter"},
-                    ],
-                    "datasets": [],
-                    "metadata": {"description": "Downscaled using linear resampling"},
-                    "name": "my_zarr_group",
-                    "type": "linear",
-                    "version": "0.4",
-                }
-            ]
-        },
-    )
+    check_zattrs(zarr_path, INITIAL_ATTRS)
 
     assert memory_per_process(arr, chunk_size=chunk_size) == 18282880
     group.add_full_res_data(
@@ -158,26 +157,6 @@ def test_delayed(tmp_path: Path, arr: da.Array) -> None:
     compressor = numcodecs.blosc.Blosc(cname="zstd", clevel=2, shuffle=2)
     chunk_size = 64
 
-    check_zattrs(
-        zarr_path,
-        {
-            "multiscales": [
-                {
-                    "axes": [
-                        {"name": "x", "type": "space", "unit": "centimeter"},
-                        {"name": "y", "type": "space", "unit": "centimeter"},
-                        {"name": "z", "type": "space", "unit": "centimeter"},
-                    ],
-                    "datasets": [],
-                    "metadata": {"description": "Downscaled using linear resampling"},
-                    "name": "my_zarr_group",
-                    "type": "linear",
-                    "version": "0.4",
-                }
-            ]
-        },
-    )
-
     tasks = group.add_full_res_data(
         arr,
         n_processes=None,
@@ -187,25 +166,7 @@ def test_delayed(tmp_path: Path, arr: da.Array) -> None:
 
     assert isinstance(tasks, Delayed)
     # Check that metadata hasn't been updated yet
-    check_zattrs(
-        zarr_path,
-        {
-            "multiscales": [
-                {
-                    "axes": [
-                        {"name": "x", "type": "space", "unit": "centimeter"},
-                        {"name": "y", "type": "space", "unit": "centimeter"},
-                        {"name": "z", "type": "space", "unit": "centimeter"},
-                    ],
-                    "datasets": [],
-                    "metadata": {"description": "Downscaled using linear resampling"},
-                    "name": "my_zarr_group",
-                    "type": "linear",
-                    "version": "0.4",
-                }
-            ]
-        },
-    )
+    check_zattrs(zarr_path, INITIAL_ATTRS)
 
     tasks.compute()
     # Check metadata now updated
