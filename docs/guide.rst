@@ -13,8 +13,9 @@ The code is designed based on the following assumptions:
 If we have input slices of shape ``(nx, ny)``, and an output chunk shape of ``(nc, nc, nc)`` it makes sense to split the conversion into individual 'slabs' that have shape ``(nx, ny, nc)``.
 This means there is a one-to-one mapping from slices to slabs, and slabs to chunks, allowing each slab to be processed in parallel without interfering with the other slabs.
 
-Third-party multi-threading
----------------------------
-``stack-to-chunk`` turns off third-party multi-threading in ``blosc`` when running.
-This allows the ``n_processes`` argument to be respected when set to ``1``, and
-prevents issues when ``stack_to_chunk`` uses a larger number of parallel processes.
+Scheduling with dask
+--------------------
+``stack-to-chunk`` uses `dask` run the data copying and downsample tasks in parallel.
+If you want to schedule the tasks yourself, specifying ``n_processes=None`` to `add_full_res_data` will return a `dask.delayed.Delayed` object instead of carrying out the tasks immediately.
+This can then be used to schedule the tasks manually using `dask`.
+One example where this is useuful is scheduling on a compute cluster using `dask-jobqueue`.

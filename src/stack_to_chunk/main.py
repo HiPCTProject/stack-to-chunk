@@ -176,12 +176,12 @@ class MultiScaleGroup:
 
         if n_processes is None:
             return tasks
-        else:
-            logger.info("Starting full resolution copy to zarr...")
-            with dask.config.set(num_workers=n_processes):
-                tasks.compute()
-            logger.info("Finished full resolution copy to zarr.")
-            return None
+
+        logger.info("Starting full resolution copy to zarr...")
+        with dask.config.set(num_workers=n_processes):
+            tasks.compute()
+        logger.info("Finished full resolution copy to zarr.")
+        return None
 
     def add_downsample_level(self, level: int) -> None:
         """
