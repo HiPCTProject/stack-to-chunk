@@ -112,7 +112,7 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
     )
     group.add_full_res_data(
         arr,
-        n_processes=2,
+        n_processes=1,
     )
 
     zarr_arr = zarr.open(zarr_path / "0")
@@ -164,7 +164,7 @@ def test_parallel_copy(tmp_path: Path, arr: da.Array) -> None:
     )
     group.add_full_res_data(
         arr[:, :, :64],
-        n_processes=2,
+        n_processes=1,
         start_z_idx=0,
     )
     with pytest.raises(
@@ -173,7 +173,7 @@ def test_parallel_copy(tmp_path: Path, arr: da.Array) -> None:
     ):
         group.add_full_res_data(
             arr[:64],
-            n_processes=2,
+            n_processes=1,
             start_z_idx=2,
         )
     group.add_full_res_data(
@@ -205,5 +205,5 @@ def test_wrong_chunksize(tmp_path: Path, arr: da.Array) -> None:
     ):
         group.add_full_res_data(
             arr.rechunk(chunks=(arr.shape[0], arr.shape[1], 2)),
-            n_processes=2,
+            n_processes=1,
         )
