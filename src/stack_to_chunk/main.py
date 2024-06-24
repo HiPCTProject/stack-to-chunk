@@ -2,15 +2,15 @@
 Main code for converting stacks to chunks.
 """
 
-from multiprocessing import Pool
 from pathlib import Path
 from typing import Any, Literal
 
+import dask.delayed
 import numpy as np
 import zarr
 from dask.array.core import Array
+from dask.delayed import Delayed
 from loguru import logger
-from numcodecs import blosc
 from numcodecs.abc import Codec
 
 from stack_to_chunk._array_helpers import _copy_slab
@@ -103,8 +103,8 @@ class MultiScaleGroup:
         *,
         chunk_size: int,
         compressor: Literal["default"] | Codec,
-        n_processes: int,
-    ) -> None:
+        n_processes: int | None,
+    ) -> None | Delayed:
         """
         Add the 'original' full resolution data to this group.
 
@@ -120,6 +120,9 @@ class MultiScaleGroup:
             Compressor to use when writing data to zarr dataset.
         n_processes :
             Number of parallel processes to use to read/write data.
+            If `None` instead of adding the full resolution data immediately,
+            a `dask.delayed.Delayed` object will be reuturned that can be used
+            by the user to manually execute the tasks.
 
         Raises
         ------
@@ -165,21 +168,20 @@ class MultiScaleGroup:
             for (zmin, zmax) in slab_idxs
         ]
 
-        logger.info("Starting full resolution copy to zarr...")
-        blosc_use_threads = blosc.use_threads
-        blosc.use_threads = 0
+        copy_delayed = dask.delayed(_copy_slab)
+        tasks: Delayed = dask.delayed(
+            [copy_delayed(*args) for args in all_args]
+            + [dask.delayed(self._add_level_metadata)(0)]
+        )
 
-        # Use try/finally pattern to allow code coverage to be collected
-        p = Pool(n_processes)
-        try:
-            p.starmap(_copy_slab, all_args)
-        finally:
-            p.close()
-            p.join()
-
-        blosc.use_threads = blosc_use_threads
-        self._add_level_metadata(0)
-        logger.info("Finished full resolution copy to zarr.")
+        if n_processes is None:
+            return tasks
+        else:
+            logger.info("Starting full resolution copy to zarr...")
+            with dask.config.set(num_workers=n_processes):
+                tasks.compute()
+            logger.info("Finished full resolution copy to zarr.")
+            return None
 
     def add_downsample_level(self, level: int) -> None:
         """
