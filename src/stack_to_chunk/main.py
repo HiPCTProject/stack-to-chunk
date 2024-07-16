@@ -142,6 +142,7 @@ class MultiScaleGroup:
             chunks=(chunk_size, chunk_size, chunk_size),
             dtype=data.dtype,
             compressor=compressor,
+            dimension_separator="/",
         )
         self._add_level_metadata(0)
 
@@ -282,6 +283,7 @@ class MultiScaleGroup:
             chunks=source_arr.chunks,
             dtype=source_arr.dtype,
             compressor=source_arr.compressor,
+            dimension_separator="/",
         )
 
         block_indices = [
