@@ -13,6 +13,7 @@ from dask.array.core import Array
 from loguru import logger
 from numcodecs import blosc
 from numcodecs.abc import Codec
+from joblib import Parallel, delayed
 
 from stack_to_chunk._array_helpers import _copy_slab, _downsample_block
 from stack_to_chunk.ome_ngff import SPATIAL_UNIT
@@ -225,17 +226,8 @@ class MultiScaleGroup:
         blosc_use_threads = blosc.use_threads
         blosc.use_threads = 0
 
-        # Use try/finally pattern to allow code coverage to be collected
-        if n_processes == 1:
-            for args in all_args:
-                _copy_slab(*args)
-        else:
-            p = Pool(n_processes)
-            try:
-                p.starmap(_copy_slab, all_args)
-            finally:
-                p.close()
-                p.join()
+        jobs = [_copy_slab(*args) for args in all_args]
+        Parallel(n_jobs=n_processes)(jobs)
 
         blosc.use_threads = blosc_use_threads
         logger.info("Finished full resolution copy to zarr.")
@@ -299,13 +291,8 @@ class MultiScaleGroup:
         blosc_use_threads = blosc.use_threads
         blosc.use_threads = 0
 
-        # Use try/finally pattern to allow code coverage to be collected
-        p = Pool(n_processes)
-        try:
-            p.starmap(_downsample_block, tqdm.tqdm(all_args, total=len(all_args)))
-        finally:
-            p.close()
-            p.join()
+        jobs = [_downsample_block(*args) for args in all_args]
+        Parallel(n_jobs=n_processes, verbose=10)(jobs)
 
         self._add_level_metadata(level)
         blosc.use_threads = blosc_use_threads
