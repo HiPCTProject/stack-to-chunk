@@ -66,7 +66,7 @@ def check_full_res_copy(zarr_path: Path, group: zarr.Group, arr: da.Array) -> No
     assert data == {"zarr_format": 2}
 
 
-@pytest.fixture()
+@pytest.fixture
 def arr() -> da.Array:
     shape = (583, 245, 156)
     arr = da.random.randint(low=0, high=2**16, dtype=np.uint16, size=shape)
