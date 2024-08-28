@@ -2,9 +2,11 @@ import dask.array as da
 import numpy as np
 import skimage.measure
 import zarr
+from joblib import delayed
 from loguru import logger
 
 
+@delayed  # type: ignore[misc]
 def _copy_slab(arr_zarr: zarr.Array, slab: da.Array, zstart: int, zend: int) -> None:
     """
     Copy a single slab of data to a zarr array.
@@ -31,6 +33,7 @@ def _copy_slab(arr_zarr: zarr.Array, slab: da.Array, zstart: int, zend: int) -> 
     logger.info(f"Finished copying z={zstart} -> {zend-1}")
 
 
+@delayed  # type: ignore[misc]
 def _downsample_block(
     arr_in: zarr.Array, arr_out: zarr.Array, block_idx: tuple[int, int, int]
 ) -> None:
