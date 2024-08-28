@@ -2,18 +2,16 @@
 Main code for converting stacks to chunks.
 """
 
-from multiprocessing import Pool
 from pathlib import Path
 from typing import Any, Literal
 
 import numpy as np
-import tqdm
 import zarr
 from dask.array.core import Array
+from joblib import Parallel
 from loguru import logger
 from numcodecs import blosc
 from numcodecs.abc import Codec
-from joblib import Parallel, delayed
 
 from stack_to_chunk._array_helpers import _copy_slab, _downsample_block
 from stack_to_chunk.ome_ngff import SPATIAL_UNIT

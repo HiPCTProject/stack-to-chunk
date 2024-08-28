@@ -2,8 +2,8 @@ import dask.array as da
 import numpy as np
 import skimage.measure
 import zarr
+from joblib import delayed
 from loguru import logger
-from joblib import Parallel, delayed
 
 
 @delayed
