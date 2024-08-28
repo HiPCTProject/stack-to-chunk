@@ -42,7 +42,8 @@ def check_full_res_copy(zarr_path: Path, group: zarr.Group, arr: da.Array) -> No
                     "datasets": [
                         {
                             "coordinateTransformations": [
-                                {"scale": [3.0, 4.0, 5.0], "type": "scale"}
+                                {"translation": [0.5, 0.5, 0.5], "type": "translation"},
+                                {"scale": [3.0, 4.0, 5.0], "type": "scale"},
                             ],
                             "path": "0",
                         }
@@ -153,13 +154,15 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
                     "datasets": [
                         {
                             "coordinateTransformations": [
-                                {"scale": [3.0, 4.0, 5.0], "type": "scale"}
+                                {"translation": [0.5, 0.5, 0.5], "type": "translation"},
+                                {"scale": [3.0, 4.0, 5.0], "type": "scale"},
                             ],
                             "path": "0",
                         },
                         {
                             "coordinateTransformations": [
-                                {"scale": [6.0, 8.0, 10.0], "type": "scale"}
+                                {"translation": [0.5, 0.5, 0.5], "type": "translation"},
+                                {"scale": [6.0, 8.0, 10.0], "type": "scale"},
                             ],
                             "path": "1",
                         },

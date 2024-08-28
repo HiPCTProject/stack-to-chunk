@@ -326,10 +326,11 @@ class MultiScaleGroup:
         new_dataset = {
             "path": str(level),
             "coordinateTransformations": [
+                {"type": "translation", "translation": [0.5] * 3},
                 {
                     "type": "scale",
                     "scale": scale_factors,
-                }
+                },
             ],
         }
 
@@ -355,7 +356,7 @@ def open_multiscale_group(path: Path) -> MultiScaleGroup:
     group = zarr.open_group(store=path, mode="r")
     multiscales = group.attrs["multiscales"][0]
     name = multiscales["name"]
-    voxel_size = multiscales["datasets"][0]["coordinateTransformations"][0]["scale"]
+    voxel_size = multiscales["datasets"][0]["coordinateTransformations"][1]["scale"]
     spatial_unit = multiscales["axes"][0]["unit"]
 
     return MultiScaleGroup(
