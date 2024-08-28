@@ -18,3 +18,7 @@ Convert stacks of images to a chunked zarr dataset. Specifically this code is wr
    auto_examples/tutorial.rst
    guide
    api
+
+Changelog
+---------
+See https://github.com/HiPCTProject/stack-to-chunk/releases for the list of tags and a changelog for each one.
