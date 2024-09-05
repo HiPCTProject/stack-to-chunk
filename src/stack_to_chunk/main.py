@@ -163,7 +163,7 @@ class MultiScaleGroup:
         n_processes :
             Number of parallel processes to use to read/write data.
         start_z_idx :
-            z-index at which this stack of data starts. Can be useful to write
+            z-index at which this stack of input data starts. Can be useful to write
             multiple slabs in parallel using a compute cluster where the job wants
             to be split into many small individual Python processes.
 

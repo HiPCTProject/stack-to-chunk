@@ -213,10 +213,17 @@ def test_parallel_copy(tmp_path: Path, arr: da.Array) -> None:
         chunk_size=chunk_size,
         compressor=compressor,
     )
+    # Add first slab
     group.add_full_res_data(
         arr[:, :, :64],
         n_processes=1,
         start_z_idx=0,
+    )
+    # Add second slab
+    group.add_full_res_data(
+        arr[:, :, 64:],
+        n_processes=1,
+        start_z_idx=64,
     )
     with pytest.raises(
         ValueError,
@@ -227,11 +234,6 @@ def test_parallel_copy(tmp_path: Path, arr: da.Array) -> None:
             n_processes=1,
             start_z_idx=2,
         )
-    group.add_full_res_data(
-        arr[:, :, 64:],
-        n_processes=1,
-        start_z_idx=64,
-    )
 
     check_full_res_copy(zarr_path, group, arr)
 
