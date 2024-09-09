@@ -1,6 +1,6 @@
 """Info for working with OME-NGFF."""
 
-from typing import Literal
+from typing import Literal, TypedDict
 
 SPATIAL_UNIT = Literal[
     "angstrom",
@@ -30,3 +30,12 @@ SPATIAL_UNIT = Literal[
     "zeptometer",
     "zettameter",
 ]
+
+
+class DatasetDict(TypedDict):
+    """
+    An OME-zarr dataset.
+    """
+
+    coordinateTransformations: list[dict[str, str | list[int]]]
+    path: str

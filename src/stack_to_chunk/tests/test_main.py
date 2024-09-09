@@ -306,3 +306,56 @@ def test_padding(tmp_path: Path) -> None:
     group.add_downsample_level(1, n_processes=1)
     arr_downsammpled = group[1]
     np.testing.assert_equal(arr_downsammpled[:], [[[3]], [[12]]])
+
+
+def test_metadata_sorting(tmp_path: Path) -> None:
+    # Check that metadata levels added in the wrong order (for some reason...)
+    # are sorted from low to high.
+    zarr_path = tmp_path / "group.ome.zarr"
+    group = MultiScaleGroup(
+        zarr_path,
+        name="my_zarr_group",
+        spatial_unit="centimeter",
+        voxel_size=(3, 4, 5),
+    )
+    group._add_level_metadata(1)  # noqa: SLF001
+    group._add_level_metadata(0)  # noqa: SLF001
+    check_zattrs(
+        zarr_path,
+        {
+            "multiscales": [
+                {
+                    "axes": [
+                        {"name": "x", "type": "space", "unit": "centimeter"},
+                        {"name": "y", "type": "space", "unit": "centimeter"},
+                        {"name": "z", "type": "space", "unit": "centimeter"},
+                    ],
+                    "datasets": [
+                        {
+                            "coordinateTransformations": [
+                                {"translation": [0.5, 0.5, 0.5], "type": "translation"},
+                                {"scale": [3.0, 4.0, 5.0], "type": "scale"},
+                            ],
+                            "path": "0",
+                        },
+                        {
+                            "coordinateTransformations": [
+                                {"translation": [0.5, 0.5, 0.5], "type": "translation"},
+                                {"scale": [6.0, 8.0, 10.0], "type": "scale"},
+                            ],
+                            "path": "1",
+                        },
+                    ],
+                    "metadata": {
+                        "description": "Downscaled using local mean in 2x2x2 blocks.",
+                        "kwargs": {"block_size": 2, "func": "np.mean"},
+                        "method": "skimage.measure.block_reduce",
+                        "version": "0.24.0",
+                    },
+                    "name": "my_zarr_group",
+                    "type": "local mean",
+                    "version": "0.4",
+                }
+            ]
+        },
+    )
