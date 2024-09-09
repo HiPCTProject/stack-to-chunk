@@ -18,3 +18,8 @@ Third-party multi-threading
 ``stack-to-chunk`` turns off third-party multi-threading in ``blosc`` when running.
 This allows the ``n_processes`` argument to be respected when set to ``1``, and
 prevents issues when ``stack_to_chunk`` uses a larger number of parallel processes.
+
+Zarr group layout
+-----------------
+The zarr groups produced by ``stack-to-chunk`` contain zarr arrays that are labelled 0, 1, 2, 3... etc.
+The array at ``0`` is the full-resolution dataset, and each subsequent array is downsampled by a factor of :math:`2^{i}`.

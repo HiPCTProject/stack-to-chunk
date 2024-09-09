@@ -14,7 +14,7 @@ from numcodecs import blosc
 from numcodecs.abc import Codec
 
 from stack_to_chunk._array_helpers import _copy_slab, _downsample_block
-from stack_to_chunk.ome_ngff import SPATIAL_UNIT
+from stack_to_chunk.ome_ngff import SPATIAL_UNIT, DatasetDict
 
 
 def memory_per_process(input_data: Array, *, chunk_size: int) -> int:
@@ -325,6 +325,11 @@ class MultiScaleGroup:
             return
 
         multiscales["datasets"].append(new_dataset)
+
+        def get_level(dataset_meta: DatasetDict) -> int:
+            return int(dataset_meta["path"])
+
+        multiscales["datasets"] = sorted(multiscales["datasets"], key=get_level)
         self._group.attrs["multiscales"] = [multiscales]
 
 
