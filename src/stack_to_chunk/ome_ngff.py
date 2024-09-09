@@ -33,6 +33,9 @@ SPATIAL_UNIT = Literal[
 
 
 class DatasetDict(TypedDict):
-    # TODO: add a coordinate transform typed dict
+    """
+    An OME-zarr dataset.
+    """
+
     coordinateTransformations: list[dict[str, str | list[int]]]
     path: str

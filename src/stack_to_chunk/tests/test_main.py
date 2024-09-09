@@ -309,10 +309,8 @@ def test_padding(tmp_path: Path) -> None:
 
 
 def test_metadata_sorting(tmp_path: Path) -> None:
-    """
-    Check that metadata levels added in the wrong order (for some reason...)
-    are sorted from low to high.
-    """
+    # Check that metadata levels added in the wrong order (for some reason...)
+    # are sorted from low to high.
     zarr_path = tmp_path / "group.ome.zarr"
     group = MultiScaleGroup(
         zarr_path,
@@ -320,8 +318,8 @@ def test_metadata_sorting(tmp_path: Path) -> None:
         spatial_unit="centimeter",
         voxel_size=(3, 4, 5),
     )
-    group._add_level_metadata(1)
-    group._add_level_metadata(0)
+    group._add_level_metadata(1)  # noqa: SLF001
+    group._add_level_metadata(0)  # noqa: SLF001
     check_zattrs(
         zarr_path,
         {
