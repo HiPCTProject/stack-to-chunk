@@ -1,11 +1,11 @@
 """Convert stacks of images to chunked datasets."""
 
 __all__ = [
+    "SPATIAL_UNIT",
     "MultiScaleGroup",
+    "__version__",
     "memory_per_process",
     "open_multiscale_group",
-    "SPATIAL_UNIT",
-    "__version__",
 ]
 
 from loguru import logger
