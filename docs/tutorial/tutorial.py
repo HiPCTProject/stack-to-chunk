@@ -70,7 +70,7 @@ print(images)
 # to the group yet.
 
 group = stack_to_chunk.MultiScaleGroup(
-    temp_dir_path / "chunked.zarr",
+    temp_dir_path / "chunked.ome.zarr",
     name="my_zarr_group",
     spatial_unit="centimeter",
     voxel_size=(3, 4, 5),
