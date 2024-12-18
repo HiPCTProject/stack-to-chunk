@@ -3,9 +3,7 @@ build-backend = "setuptools.build_meta"
 requires = ["setuptools>=64", "setuptools_scm>=8"]
 
 [project]
-authors = [
-    {email = "d.stansby@ucl.ac.uk", name = "HiP-CT Project"},
-]
+authors = [{ email = "d.stansby@ucl.ac.uk", name = "HiP-CT Project" }]
 classifiers = [
     "Operating System :: POSIX",
     "Programming Language :: Python :: 3",
@@ -22,13 +20,10 @@ dependencies = [
     "zarr==2.18.4",
 ]
 description = "Convert stacks of images to chunked datasets"
-dynamic = [
-    "version",
-]
-keywords = [
-]
+dynamic = ["version"]
+keywords = []
 name = "stack_to_chunk"
-optional-dependencies = {dev = [
+optional-dependencies = { dev = [
     "pre-commit",
     "tox>=4",
 ], docs = [
@@ -39,22 +34,18 @@ optional-dependencies = {dev = [
     "sphinx-autoapi",
     "sphinx-gallery",
     "tifffile",
-]}
+] }
 readme = "README.md"
 requires-python = ">=3.11"
 license.file = "LICENCE.md"
 urls.homepage = "https://github.com/HiPCTProject/stack-to-chunk"
 
 [tool.coverage]
-run = {branch = true, parallel = true, source = [
-    "stack_to_chunk",
-]}
-paths.source = [
-    "src",
-]
+run = { branch = true, parallel = true, source = ["stack_to_chunk"] }
+paths.source = ["src"]
 
 [tool.pytest.ini_options]
-addopts = "--color=yes --cov -v"
+addopts = "--color=yes --cov -vv"
 
 [tool.setuptools_scm]
 local_scheme = "no-local-version"
@@ -68,7 +59,4 @@ overrides."project.classifiers".inline_arrays = false
 overrides."tool.coverage.paths.source".inline_arrays = false
 
 [tool.uv]
-dev-dependencies = [
-    "pytest-cov>=5.0.0",
-    "pytest>=8.3.2",
-]
+dev-dependencies = ["pytest-cov>=5.0.0", "pytest>=8.3.2", "pre-commit>=3.8.0"]
