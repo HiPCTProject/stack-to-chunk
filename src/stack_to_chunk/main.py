@@ -59,7 +59,7 @@ class MultiScaleGroup:
         self._spatial_unit = spatial_unit
         self._voxel_size = voxel_size
 
-        if not path.exists():
+        if isinstance(path, Path) and not path.exists():
             self._create_zarr_group()
 
         self._group = zarr.open_group(store=self._path, mode="r+")
