@@ -8,6 +8,7 @@ from typing import Any
 import dask.array as da
 import numcodecs
 import numpy as np
+import ome_zarr_models.v04
 import pytest
 import zarr
 
@@ -42,8 +43,8 @@ def check_full_res_copy(zarr_path: Path, group: zarr.Group, arr: da.Array) -> No
                     "datasets": [
                         {
                             "coordinateTransformations": [
-                                {"translation": [0.5, 0.5, 0.5], "type": "translation"},
                                 {"scale": [3.0, 4.0, 5.0], "type": "scale"},
+                                {"translation": [1.5, 2.0, 2.5], "type": "translation"},
                             ],
                             "path": "0",
                         }
@@ -154,15 +155,15 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
                     "datasets": [
                         {
                             "coordinateTransformations": [
-                                {"translation": [0.5, 0.5, 0.5], "type": "translation"},
                                 {"scale": [3.0, 4.0, 5.0], "type": "scale"},
+                                {"translation": [1.5, 2.0, 2.5], "type": "translation"},
                             ],
                             "path": "0",
                         },
                         {
                             "coordinateTransformations": [
-                                {"translation": [0.5, 0.5, 0.5], "type": "translation"},
                                 {"scale": [6.0, 8.0, 10.0], "type": "scale"},
+                                {"translation": [3.0, 4.0, 5.0], "type": "translation"},
                             ],
                             "path": "1",
                         },
@@ -180,6 +181,10 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
             ]
         },
     )
+
+    # Validate
+    zarr_group = zarr.open_group(zarr_path, mode="r")
+    ome_zarr_models.v04.Image.from_zarr(zarr_group)
 
     with pytest.raises(RuntimeError, match="Level 1 already found in zarr group"):
         group.add_downsample_level(1, n_processes=2)
@@ -333,18 +338,91 @@ def test_metadata_sorting(tmp_path: Path) -> None:
                     "datasets": [
                         {
                             "coordinateTransformations": [
-                                {"translation": [0.5, 0.5, 0.5], "type": "translation"},
                                 {"scale": [3.0, 4.0, 5.0], "type": "scale"},
+                                {"translation": [1.5, 2.0, 2.5], "type": "translation"},
                             ],
                             "path": "0",
                         },
                         {
                             "coordinateTransformations": [
-                                {"translation": [0.5, 0.5, 0.5], "type": "translation"},
                                 {"scale": [6.0, 8.0, 10.0], "type": "scale"},
+                                {"translation": [3.0, 4.0, 5.0], "type": "translation"},
                             ],
                             "path": "1",
                         },
+                    ],
+                    "metadata": {
+                        "description": "Downscaled using local mean in 2x2x2 blocks.",
+                        "kwargs": {"block_size": 2, "func": "np.mean"},
+                        "method": "skimage.measure.block_reduce",
+                        "version": "0.24.0",
+                    },
+                    "name": "my_zarr_group",
+                    "type": "local mean",
+                    "version": "0.4",
+                }
+            ]
+        },
+    )
+
+
+def test_fix_transform_order(tmp_path: Path) -> None:
+    zarr_path = (tmp_path / "zarr_group").resolve()
+    group = zarr.open_group(zarr_path, mode="w")
+    group.attrs.put(
+        {
+            "multiscales": [
+                {
+                    "axes": [
+                        {"name": "x", "type": "space", "unit": "centimeter"},
+                        {"name": "y", "type": "space", "unit": "centimeter"},
+                        {"name": "z", "type": "space", "unit": "centimeter"},
+                    ],
+                    "datasets": [
+                        {
+                            "coordinateTransformations": [
+                                # IMPORTANT: translation and scale wrong way round
+                                {"translation": [0.5, 0.5, 0.5], "type": "translation"},
+                                {"scale": [3.0, 4.0, 5.0], "type": "scale"},
+                            ],
+                            "path": "0",
+                        }
+                    ],
+                    "metadata": {
+                        "description": "Downscaled using local mean in 2x2x2 blocks.",
+                        "kwargs": {"block_size": 2, "func": "np.mean"},
+                        "method": "skimage.measure.block_reduce",
+                        "version": "0.24.0",
+                    },
+                    "name": "my_zarr_group",
+                    "type": "local mean",
+                    "version": "0.4",
+                }
+            ]
+        }
+    )
+
+    # This call should fix metadata
+    open_multiscale_group(zarr_path)
+    check_zattrs(
+        zarr_path,
+        {
+            "multiscales": [
+                {
+                    "axes": [
+                        {"name": "x", "type": "space", "unit": "centimeter"},
+                        {"name": "y", "type": "space", "unit": "centimeter"},
+                        {"name": "z", "type": "space", "unit": "centimeter"},
+                    ],
+                    "datasets": [
+                        {
+                            "coordinateTransformations": [
+                                # IMPORTANT: order now fixed
+                                {"scale": [3.0, 4.0, 5.0], "type": "scale"},
+                                {"translation": [1.5, 2.0, 2.5], "type": "translation"},
+                            ],
+                            "path": "0",
+                        }
                     ],
                     "metadata": {
                         "description": "Downscaled using local mean in 2x2x2 blocks.",
