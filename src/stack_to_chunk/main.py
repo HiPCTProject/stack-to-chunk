@@ -2,6 +2,7 @@
 Main code for converting stacks to chunks.
 """
 
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, Literal
 
@@ -312,10 +313,13 @@ class MultiScaleGroup:
         new_dataset = {
             "path": str(level),
             "coordinateTransformations": [
-                {"type": "translation", "translation": [0.5] * 3},
                 {
                     "type": "scale",
                     "scale": scale_factors,
+                },
+                {
+                    "type": "translation",
+                    "translation": (np.array(scale_factors) * 0.5).tolist(),
                 },
             ],
         }
@@ -345,11 +349,50 @@ def open_multiscale_group(path: Path) -> MultiScaleGroup:
 
     """
     group = zarr.open_group(store=path, mode="r")
-    multiscales = group.attrs["multiscales"][0]
+    attrs = group.attrs.asdict()
+    multiscales = attrs["multiscales"][0]
     name = multiscales["name"]
-    voxel_size = multiscales["datasets"][0]["coordinateTransformations"][1]["scale"]
+    transforms = multiscales["datasets"][0]["coordinateTransformations"]
+
+    if "scale" in transforms[1]:
+        logger.warning(
+            "Dataset is invalid, because the scale transform is not first. "
+            "Will attempt to fix metadata...",
+            stacklevel=1,
+        )
+        group = zarr.open_group(store=path, mode="a")
+        _fix_transform_order(group)
+        return open_multiscale_group(path)
+
+    voxel_size = transforms[0]["scale"]
     spatial_unit = multiscales["axes"][0]["unit"]
 
     return MultiScaleGroup(
         path, name=name, voxel_size=voxel_size, spatial_unit=spatial_unit
     )
+
+
+def _fix_transform_order(group: zarr.Group) -> None:
+    attrs = group.attrs.asdict()
+    multiscales = deepcopy(attrs["multiscales"])
+    for i in range(len(multiscales[0]["datasets"])):
+        transforms = multiscales[0]["datasets"][i]["coordinateTransformations"]
+        if not (
+            len(transforms) == 2
+            and transforms[0]["type"] == "translation"
+            and transforms[1]["type"] == "scale"
+        ):
+            logger.error(
+                "Did not find a translation and scale transform (in that order)"
+            )
+
+        # Flip order
+        translation = transforms[0]["translation"]
+        scale = transforms[1]["scale"]
+        translation = (np.array(translation) * np.array(scale)).tolist()
+        multiscales[0]["datasets"][i]["coordinateTransformations"] = [
+            {"type": "scale", "scale": scale},
+            {"type": "translation", "translation": translation},
+        ]
+
+    group.attrs.put({"multiscales": multiscales})
