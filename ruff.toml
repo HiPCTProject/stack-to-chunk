@@ -7,7 +7,6 @@ quote-style = "double"
 
 [lint]
 ignore = [
-    "ANN101", # Missing type annotation for `self`
     "COM812",
     "D107", # Missing docstring
     "D200", # One-line docstring should fit on one line
@@ -34,9 +33,5 @@ per-file-ignores = {"docs/*" = [
     "INP001", # is part of an implicit namespace package
     "S101",
 ]}
-select = [
-    "ALL",
-]
-isort.known-first-party = [
-    "stack_to_chunk",
-]
+select = ["ALL"]
+isort.known-first-party = ["stack_to_chunk"]
