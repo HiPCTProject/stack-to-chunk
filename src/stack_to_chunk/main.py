@@ -240,9 +240,10 @@ class MultiScaleGroup:
             Level of downsampling. Level ``i`` corresponds to a downsampling factor
             of ``2**i``.
         n_processes :
-            Number of parallel processes to use to read/write data. See the joblib.Parallel
-            documentation for more info of allowed values. In particluar, you can set
-            ``n_processes=-1`` to get joblib to use all available CPUs.
+            Number of parallel processes to use to read/write data. See the
+            joblib.Parallel documentation for more info of allowed values.
+            In particluar, you can set ``n_processes=-1`` to get joblib to use
+            all available CPUs.
 
         Notes
         -----
