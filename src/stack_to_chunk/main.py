@@ -354,7 +354,7 @@ def open_multiscale_group(path: Path) -> MultiScaleGroup:
     name = multiscales["name"]
     transforms = multiscales["datasets"][0]["coordinateTransformations"]
 
-    if "scale" in transforms[1]:
+    if transforms[1]["type"] == "scale":
         logger.warning(
             "Dataset is invalid, because the scale transform is not first. "
             "Will attempt to fix metadata...",
