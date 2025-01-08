@@ -17,7 +17,7 @@ dependencies = [
     "loguru==0.7.3",
     "numpy==2.2.0",
     "scikit-image==0.24.0",
-    "zarr==2.18.4",
+    "zarr==3.0.0rc2",
 ]
 description = "Convert stacks of images to chunked datasets"
 dynamic = ["version"]
