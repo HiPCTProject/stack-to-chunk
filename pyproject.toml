@@ -70,7 +70,7 @@ overrides."tool.coverage.paths.source".inline_arrays = false
 
 [tool.uv]
 dev-dependencies = [
-    "ome-zarr-models@git+https://github.com/BioImageTools/ome-zarr-models-py@0068c1e4fcca35a942260f82a299e05ebb180019",
+    "ome-zarr-models@git+https://github.com/dstansby/ome-zarr-models-py@f20e6c08c8ed3bef4e88ec6009d370db9d0530b4",
     "pre-commit>=3.8.0",
     "pytest-cov>=5.0.0",
     "pytest>=8.3.2",
