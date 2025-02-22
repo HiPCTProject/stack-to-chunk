@@ -16,6 +16,8 @@ dependencies = [
     "joblib==1.4.2",
     "loguru==0.7.3",
     "numpy==2.2.1",
+    "ome-zarr-models",
+    "pydantic-zarr>=0.7.0",
     "scikit-image==0.25.0",
     "zarr==2.18.4",
 ]
@@ -24,6 +26,7 @@ dynamic = ["version"]
 keywords = []
 name = "stack_to_chunk"
 optional-dependencies = {dev = [
+    "mypy",
     "pre-commit",
     "tox>=4",
 ], docs = [
@@ -65,3 +68,6 @@ dev-dependencies = [
     "pytest-cov>=5.0.0",
     "pytest>=8.3.2",
 ]
+
+[tool.uv.sources]
+ome-zarr-models = {git = "https://github.com/dstansby/ome-zarr-models-py", rev = "f20e6c08c8ed3bef4e88ec6009d370db9d0530b4"}
