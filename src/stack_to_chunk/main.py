@@ -4,7 +4,6 @@ Main code for converting stacks to chunks.
 
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Literal
 
 import numpy as np
 import zarr
@@ -12,7 +11,9 @@ from dask.array.core import Array
 from joblib import Parallel
 from loguru import logger
 from numcodecs import blosc
-from numcodecs.abc import Codec
+from ome_zarr_models.v04 import Image
+from ome_zarr_models.v04.axes import Axis
+from pydantic_zarr.v2 import ArraySpec
 
 from stack_to_chunk._array_helpers import _copy_slab, _downsample_block
 from stack_to_chunk.ome_ngff import SPATIAL_UNIT, DatasetDict
@@ -32,7 +33,7 @@ def memory_per_process(input_data: Array, *, chunk_size: int) -> int:
 
 class MultiScaleGroup:
     """
-    A class for creating and interacting with a OME-zarr multi-scale group.
+    A class for creating and interacting with a OME-Zarr multi-scale group.
 
     Parameters
     ----------
@@ -44,6 +45,9 @@ class MultiScaleGroup:
         Size of a single voxel, in units of spatial_units.
     spatial_units :
         Units of the voxel size.
+    array_spec :
+        Specification for initial dataset array. If opening an existing group
+        does not need to be provided.
 
     """
 
@@ -54,42 +58,54 @@ class MultiScaleGroup:
         name: str,
         voxel_size: tuple[float, float, float],
         spatial_unit: SPATIAL_UNIT,
+        array_spec: ArraySpec | None = None,
     ) -> None:
+        self._store = zarr.DirectoryStore(path)
         self._path = path
         self._name = name
         self._spatial_unit = spatial_unit
         self._voxel_size = voxel_size
 
         if isinstance(path, Path) and not path.exists():
-            self._create_zarr_group()
+            if array_spec is None:
+                msg = "Group does not already exist, array_spec must be provided"
+                raise ValueError(msg)
+            self._create_zarr_group(array_spec)
 
-        self._group = zarr.open_group(store=self._path, mode="r+")
+        self._group = zarr.open_group(store=self._store, mode="r+")
 
-    def _create_zarr_group(self) -> None:
+    def _create_zarr_group(self, array_spec: ArraySpec) -> None:
         """
         Create the zarr group.
 
         Saves a reference to the group on the ._group attribute.
         """
-        self._group = zarr.open_group(store=self._path, mode="w")
-        multiscales: dict[str, Any] = {}
-        multiscales["version"] = "0.4"
-        multiscales["name"] = self._name
-        multiscales["axes"] = [
-            {"name": "x", "type": "space", "unit": self._spatial_unit},
-            {"name": "y", "type": "space", "unit": self._spatial_unit},
-            {"name": "z", "type": "space", "unit": self._spatial_unit},
-        ]
-        multiscales["type"] = "local mean"
-        multiscales["metadata"] = {
-            "description": "Downscaled using local mean in 2x2x2 blocks.",
-            "method": "skimage.measure.block_reduce",
-            "version": "0.24.0",
-            "kwargs": {"block_size": 2, "func": "np.mean"},
-        }
-
-        multiscales["datasets"] = []
-        self._group.attrs["multiscales"] = [multiscales]
+        self._image: Image = Image.new(
+            array_specs=[array_spec],
+            paths=["0"],
+            axes=[
+                Axis(name="x", type="space", unit=self._spatial_unit),
+                Axis(name="y", type="space", unit=self._spatial_unit),
+                Axis(name="z", type="space", unit=self._spatial_unit),
+            ],
+            name=self._name,
+            type="local mean",
+            metadata={
+                "description": "Downscaled using local mean in 2x2x2 blocks.",
+                "method": "skimage.measure.block_reduce",
+                "version": "0.24.0",
+                "kwargs": {"block_size": 2, "func": "np.mean"},
+            },
+            scales=[self._voxel_size],
+            translations=[
+                (
+                    self._voxel_size[0] / 2,
+                    self._voxel_size[1] / 2,
+                    self._voxel_size[2] / 2,
+                )
+            ],
+        )
+        self._image.to_zarr(store=self._store, path="/")
 
     @property
     def levels(self) -> list[int]:
@@ -110,41 +126,6 @@ class MultiScaleGroup:
             raise ValueError(msg)
 
         return self._group[str(level)]
-
-    def create_initial_dataset(
-        self, data: Array, *, chunk_size: int, compressor: Literal["default"] | Codec
-    ) -> None:
-        """
-        Set up the inital full-resolution dataset.
-
-        Parameters
-        ----------
-        data :
-            Full input data. Must be 3D, and have a chunksize of ``(nx, ny, 1)``, where
-            ``(nx, ny)`` is the shape of the input 2D slices.
-        chunk_size :
-            Size of chunks in output zarr dataset.
-        compressor :
-            Compressor to use when writing data to zarr dataset.
-
-        Raises
-        ------
-        RuntimeError :
-            If full resolution dataset has already been created.
-
-        """
-        if "0" in self._group:
-            msg = "Full resolution dataset already set up."
-            raise RuntimeError(msg)
-        self._group.create_dataset(
-            name="0",
-            shape=data.shape,
-            chunks=(chunk_size, chunk_size, chunk_size),
-            dtype=data.dtype,
-            compressor=compressor,
-            dimension_separator="/",
-        )
-        self._add_level_metadata(0)
 
     def add_full_res_data(
         self,
