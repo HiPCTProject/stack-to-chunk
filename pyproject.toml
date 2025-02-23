@@ -16,6 +16,8 @@ dependencies = [
     "joblib==1.4.2",
     "loguru==0.7.3",
     "numpy==2.2.1",
+    "ome-zarr-models@git+https://github.com/dstansby/ome-zarr-models-py@993bd6a2b1de3a3aa274ab3118ffce82ece5f46d",
+    "pydantic-zarr==0.7.0",
     "scikit-image==0.25.0",
     "zarr==2.18.4",
 ]
@@ -24,6 +26,7 @@ dynamic = ["version"]
 keywords = []
 name = "stack_to_chunk"
 optional-dependencies = {dev = [
+    "mypy",
     "pre-commit",
     "tox>=4",
 ], docs = [
@@ -59,9 +62,4 @@ overrides."project.classifiers".inline_arrays = false
 overrides."tool.coverage.paths.source".inline_arrays = false
 
 [tool.uv]
-dev-dependencies = [
-    "ome-zarr-models@git+https://github.com/BioImageTools/ome-zarr-models-py@0068c1e4fcca35a942260f82a299e05ebb180019",
-    "pre-commit>=3.8.0",
-    "pytest-cov>=5.0.0",
-    "pytest>=8.3.2",
-]
+dev-dependencies = ["pre-commit>=3.8.0", "pytest-cov>=5.0.0", "pytest>=8.3.2"]
