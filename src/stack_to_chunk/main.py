@@ -89,7 +89,7 @@ class MultiScaleGroup:
                 Axis(name="z", type="space", unit=self._spatial_unit),
             ],
             name=self._name,
-            type="local mean",
+            multiscale_type="local mean",
             metadata={
                 "description": "Downscaled using local mean in 2x2x2 blocks.",
                 "method": "skimage.measure.block_reduce",
