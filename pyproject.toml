@@ -8,7 +8,6 @@ dynamic = ["version"]
 description = "Convert stacks of images to OME-Zarr"
 readme = "README.md"
 requires-python = ">=3.11"
-license = "BSD-3-Clause"
 license-files = ["LICENCE.md"]
 
 authors = [{ email = "d.stansby@ucl.ac.uk", name = "HiP-CT Project" }]
