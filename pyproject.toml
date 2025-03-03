@@ -12,12 +12,12 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "dask==2024.12.1",
+    "dask==2025.2.0",
     "joblib==1.4.2",
     "loguru==0.7.3",
-    "numpy==2.2.1",
-    "scikit-image==0.25.0",
-    "zarr==2.18.4",
+    "numpy==2.2.3",
+    "scikit-image==0.25.1",
+    "zarr==3.0.4",
 ]
 description = "Convert stacks of images to chunked datasets"
 dynamic = ["version"]
