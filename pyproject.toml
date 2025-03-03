@@ -45,7 +45,11 @@ run = {branch = true, parallel = true, source = ["stack_to_chunk"]}
 paths.source = ["src"]
 
 [tool.pytest.ini_options]
-addopts = "--color=yes --cov -vv"
+addopts = ["--color=yes", "--cov", "--strict-config", "--strict-markers", "-vv"]
+log_cli_level = "INFO"
+minversion = 6
+testpaths = ["src/stack_to_chunk/tests"]
+xfail_strict = true
 
 [tool.setuptools_scm]
 local_scheme = "no-local-version"
