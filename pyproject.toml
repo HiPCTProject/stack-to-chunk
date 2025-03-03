@@ -3,7 +3,14 @@ build-backend = "setuptools.build_meta"
 requires = ["setuptools>=64", "setuptools_scm>=8"]
 
 [project]
-authors = [{email = "d.stansby@ucl.ac.uk", name = "HiP-CT Project"}]
+name = "stack_to_chunk"
+dynamic = ["version"]
+description = "Convert stacks of images to OME-Zarr"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE.md" }
+
+authors = [{ email = "d.stansby@ucl.ac.uk", name = "HiP-CT Project" }]
 classifiers = [
     "Operating System :: POSIX",
     "Programming Language :: Python :: 3",
@@ -19,11 +26,9 @@ dependencies = [
     "scikit-image==0.25.1",
     "zarr==2.18.4",
 ]
-description = "Convert stacks of images to chunked datasets"
-dynamic = ["version"]
-keywords = []
-name = "stack_to_chunk"
-optional-dependencies = {dev = [
+
+
+optional-dependencies = { dev = [
     "pre-commit",
     "tox>=4",
 ], docs = [
@@ -34,14 +39,13 @@ optional-dependencies = {dev = [
     "sphinx-autoapi",
     "sphinx-gallery",
     "tifffile",
-]}
-readme = "README.md"
-requires-python = ">=3.11"
-license.file = "LICENCE.md"
-urls.homepage = "https://github.com/HiPCTProject/stack-to-chunk"
+] }
+
+[project.urls]
+homepage = "https://github.com/HiPCTProject/stack-to-chunk"
 
 [tool.coverage]
-run = {branch = true, parallel = true, source = ["stack_to_chunk"]}
+run = { branch = true, parallel = true, source = ["stack_to_chunk"] }
 paths.source = ["src"]
 
 [tool.pytest.ini_options]
