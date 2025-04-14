@@ -24,7 +24,7 @@ dependencies = [
     "loguru==0.7.3",
     "numpy==2.2.4",
     "scikit-image==0.25.1",
-    "zarr==2.18.5",
+    "zarr==2.18.7",
 ]
 
 
