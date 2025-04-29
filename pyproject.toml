@@ -19,12 +19,12 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "dask==2025.3.0",
+    "dask==2025.4.1",
     "joblib==1.4.2",
     "loguru==0.7.3",
-    "numpy==2.2.4",
+    "numpy==2.2.5",
     "scikit-image==0.25.1",
-    "zarr==2.18.5",
+    "zarr==2.18.7",
 ]
 
 
