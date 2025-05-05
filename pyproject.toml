@@ -20,7 +20,7 @@ classifiers = [
 ]
 dependencies = [
     "dask==2025.4.1",
-    "joblib==1.4.2",
+    "joblib==1.5.0",
     "loguru==0.7.3",
     "numpy==2.2.5",
     "scikit-image==0.25.1",
