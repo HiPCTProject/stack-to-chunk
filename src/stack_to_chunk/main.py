@@ -58,6 +58,11 @@ class MultiScaleGroup:
         self._path = path
         self._name = name
         self._spatial_unit = spatial_unit
+
+        if len(voxel_size) == 1:
+            voxel_size = voxel_size * 3
+        if len(voxel_size) != 3:
+            raise ValueError("voxel_size must be of length 1 or 3")
         self._voxel_size = voxel_size
 
         if isinstance(path, Path) and not path.exists():
