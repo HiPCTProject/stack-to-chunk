@@ -80,6 +80,10 @@ class MultiScaleGroup:
 
         Saves a reference to the group on the ._group attribute.
         """
+        if len(self._voxel_size) != 3:
+            msg = "voxel_size must be length 3"
+            raise ValueError(msg)
+
         self._image: Image = Image.new(
             array_specs=[array_spec],
             paths=["0"],
