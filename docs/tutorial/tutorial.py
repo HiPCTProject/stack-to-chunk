@@ -16,6 +16,7 @@ import skimage.color
 import skimage.data
 import tifffile
 from loguru import logger
+from pydantic_zarr.v2 import ArraySpec
 
 import stack_to_chunk
 
@@ -69,11 +70,13 @@ print(images)
 # Once we've created it, the ``levels`` property shows that no levels have been added
 # to the group yet.
 
+
 group = stack_to_chunk.MultiScaleGroup(
     temp_dir_path / "chunked.ome.zarr",
     name="my_zarr_group",
     spatial_unit="centimeter",
     voxel_size=(3, 4, 5),
+    array_spec=ArraySpec.from_array(images, chunks=(16, 16, 16)),
 )
 print(group.levels)
 
@@ -95,7 +98,6 @@ logger.add(sys.stdout, level="INFO")
 # %%
 # And finally, lets create our first data copy:
 
-group.create_initial_dataset(images, chunk_size=16, compressor="default")
 group.add_full_res_data(images, n_processes=1)
 
 # %%

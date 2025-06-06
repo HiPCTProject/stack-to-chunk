@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE.md" }
 
+
 authors = [{ email = "d.stansby@ucl.ac.uk", name = "HiP-CT Project" }]
 classifiers = [
     "Operating System :: POSIX",
@@ -23,11 +24,12 @@ dependencies = [
     "joblib==1.5.0",
     "loguru==0.7.3",
     "numpy==2.2.6",
+    "ome-zarr-models==0.1.6",
+    "pydantic-zarr==0.7.0",
     "scikit-image==0.25.1",
     "zarr==2.18.7",
     "numcodecs==0.15.1",
 ]
-
 
 optional-dependencies = { dev = [
     "pre-commit",
@@ -68,9 +70,4 @@ overrides."project.classifiers".inline_arrays = false
 overrides."tool.coverage.paths.source".inline_arrays = false
 
 [tool.uv]
-dev-dependencies = [
-    "ome-zarr-models@git+https://github.com/BioImageTools/ome-zarr-models-py@0068c1e4fcca35a942260f82a299e05ebb180019",
-    "pre-commit>=3.8.0",
-    "pytest-cov>=5.0.0",
-    "pytest>=8.3.2",
-]
+dev-dependencies = ["pre-commit>=3.8.0", "pytest-cov>=5.0.0", "pytest>=8.3.2"]
