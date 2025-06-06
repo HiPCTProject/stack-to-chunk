@@ -41,7 +41,6 @@ def check_full_res_copy(zarr_path: Path, group: zarr.Group, arr: da.Array) -> No
                         {"name": "y", "type": "space", "unit": "centimeter"},
                         {"name": "z", "type": "space", "unit": "centimeter"},
                     ],
-                    "coordinateTransformations": None,
                     "datasets": [
                         {
                             "coordinateTransformations": [
@@ -109,7 +108,6 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
                         {"name": "y", "type": "space", "unit": "centimeter"},
                         {"name": "z", "type": "space", "unit": "centimeter"},
                     ],
-                    "coordinateTransformations": None,
                     "datasets": [
                         {
                             "coordinateTransformations": [
@@ -165,7 +163,6 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
                         {"name": "y", "type": "space", "unit": "centimeter"},
                         {"name": "z", "type": "space", "unit": "centimeter"},
                     ],
-                    "coordinateTransformations": None,
                     "datasets": [
                         {
                             "coordinateTransformations": [
