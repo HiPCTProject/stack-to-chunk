@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE.md" }
 
+
 authors = [{ email = "d.stansby@ucl.ac.uk", name = "HiP-CT Project" }]
 classifiers = [
     "Operating System :: POSIX",
@@ -24,11 +25,11 @@ dependencies = [
     "loguru==0.7.3",
     "numpy==2.2.6",
     "ome-zarr-models==0.1.6",
+    "pydantic-zarr==0.7.0",
     "scikit-image==0.25.1",
     "zarr==2.18.7",
     "numcodecs==0.15.1",
 ]
-
 
 optional-dependencies = { dev = [
     "pre-commit",
