@@ -392,3 +392,14 @@ def test_fix_transform_order(tmp_path: Path) -> None:
             ]
         },
     )
+
+
+def test_bad_voxel_size(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="voxel_size must be length 3"):
+        MultiScaleGroup(
+            tmp_path / "test.ome.zarr",
+            name="my_zarr_group",
+            spatial_unit="micrometer",
+            voxel_size=(132.36,),  # type:ignore[arg-type]
+            array_spec=ArraySpec.from_array(np.array([1])),
+        )
