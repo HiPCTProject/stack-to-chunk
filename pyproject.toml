@@ -23,10 +23,10 @@ dependencies = [
     "dask==2025.5.1",
     "joblib==1.5.1",
     "loguru==0.7.3",
-    "numpy==2.2.6",
-    "ome-zarr-models==0.1.7",
+    "numpy==2.3.0",
+    "ome-zarr-models==0.1.8",
     "pydantic-zarr==0.7.0",
-    "scikit-image==0.25.1",
+    "scikit-image==0.25.2",
     "zarr==2.18.7",
     "numcodecs==0.15.1",
 ]
