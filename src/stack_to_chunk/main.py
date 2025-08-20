@@ -2,18 +2,19 @@
 Main code for converting stacks to chunks.
 """
 
-from copy import deepcopy
+import math
 from pathlib import Path
 
 import numpy as np
 import zarr
+import zarr.storage
 from dask.array.core import Array
 from joblib import Parallel
 from loguru import logger
 from numcodecs import blosc
-from ome_zarr_models.v04 import Image
-from ome_zarr_models.v04.axes import Axis
-from pydantic_zarr.v2 import ArraySpec
+from ome_zarr_models.v05 import Image
+from ome_zarr_models.v05.axes import Axis
+from pydantic_zarr.v3 import ArraySpec
 
 from stack_to_chunk._array_helpers import _copy_slab, _downsample_block
 from stack_to_chunk.ome_ngff import SPATIAL_UNIT, DatasetDict
@@ -60,7 +61,7 @@ class MultiScaleGroup:
         spatial_unit: SPATIAL_UNIT,
         array_spec: ArraySpec | None = None,
     ) -> None:
-        self._store = zarr.DirectoryStore(path)
+        self._store = zarr.storage.LocalStore(path)
         self._path = path
         self._name = name
         self._spatial_unit = spatial_unit
@@ -119,7 +120,7 @@ class MultiScaleGroup:
         Level 0 corresponds to full resolution data, and level ``i`` to
         data downsampled by a factor of ``2**i``.
         """
-        return [int(k) for k in self._group]
+        return sorted(int(k) for k in self._group)
 
     def __getitem__(self, level: int) -> zarr.Array:
         """
@@ -254,16 +255,15 @@ class MultiScaleGroup:
             )
 
         source_arr = self._group[level_minus_one]
-        new_shape = np.ceil(np.array(source_arr.shape) / 2)
+        new_shape = (math.ceil(i / 2) for i in source_arr.shape)
         chunk_size = source_arr.chunks[0]
 
-        sink_arr = self._group.create_dataset(
+        sink_arr = self._group.create_array(
             name=level_str,
             shape=new_shape,
             chunks=source_arr.chunks,
             dtype=source_arr.dtype,
-            compressor=source_arr.compressor,
-            dimension_separator="/",
+            compressors=source_arr.compressors,
         )
 
         block_indices = [
@@ -313,7 +313,7 @@ class MultiScaleGroup:
             ],
         }
 
-        multiscales = self._group.attrs["multiscales"][0]
+        multiscales = self._group.attrs["ome"]["multiscales"][0]
         existing_dataset_paths = [d["path"] for d in multiscales["datasets"]]
         if new_dataset["path"] in existing_dataset_paths:
             return
@@ -338,50 +338,13 @@ def open_multiscale_group(path: Path) -> MultiScaleGroup:
 
     """
     group = zarr.open_group(store=path, mode="r")
-    attrs = group.attrs.asdict()
-    multiscales = attrs["multiscales"][0]
+    ome_attrs = group.attrs.asdict()["ome"]
+    multiscales = ome_attrs["multiscales"][0]
     name = multiscales["name"]
     transforms = multiscales["datasets"][0]["coordinateTransformations"]
-
-    if transforms[1]["type"] == "scale":
-        logger.warning(
-            "Dataset is invalid, because the scale transform is not first. "
-            "Will attempt to fix metadata...",
-            stacklevel=1,
-        )
-        group = zarr.open_group(store=path, mode="a")
-        _fix_transform_order(group)
-        return open_multiscale_group(path)
-
     voxel_size = transforms[0]["scale"]
     spatial_unit = multiscales["axes"][0]["unit"]
 
     return MultiScaleGroup(
         path, name=name, voxel_size=voxel_size, spatial_unit=spatial_unit
     )
-
-
-def _fix_transform_order(group: zarr.Group) -> None:
-    attrs = group.attrs.asdict()
-    multiscales = deepcopy(attrs["multiscales"])
-    for i in range(len(multiscales[0]["datasets"])):
-        transforms = multiscales[0]["datasets"][i]["coordinateTransformations"]
-        if not (
-            len(transforms) == 2
-            and transforms[0]["type"] == "translation"
-            and transforms[1]["type"] == "scale"
-        ):
-            logger.error(
-                "Did not find a translation and scale transform (in that order)"
-            )
-
-        # Flip order
-        translation = transforms[0]["translation"]
-        scale = transforms[1]["scale"]
-        translation = (np.array(translation) * np.array(scale)).tolist()
-        multiscales[0]["datasets"][i]["coordinateTransformations"] = [
-            {"type": "scale", "scale": scale},
-            {"type": "translation", "translation": translation},
-        ]
-
-    group.attrs.put({"multiscales": multiscales})
