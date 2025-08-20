@@ -24,10 +24,10 @@ dependencies = [
     "joblib==1.5.1",
     "loguru==0.7.3",
     "numpy==2.3.2",
-    "ome-zarr-models==0.1.10",
-    "pydantic-zarr==0.7.0",
+    "ome-zarr-models@git+https://github.com/ome-zarr-models/ome-zarr-models-py@94c6529b2860df5d63a2a3d358cf720cb3923643",
+    "pydantic-zarr==0.8.2",
     "scikit-image==0.25.2",
-    "zarr==2.18.7",
+    "zarr==3.1.1",
     "numcodecs==0.15.1",
 ]
 

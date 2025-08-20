@@ -6,18 +6,18 @@ from pathlib import Path
 from typing import Any
 
 import dask.array as da
-import numcodecs
 import numpy as np
-import ome_zarr_models.v04
+import ome_zarr_models.v05
 import pytest
 import zarr
-from pydantic_zarr.v2 import ArraySpec, dictify_codec
+import zarr.codecs
+from pydantic_zarr.v3 import ArraySpec, NamedConfig
 
 from stack_to_chunk import MultiScaleGroup, memory_per_process, open_multiscale_group
 
 
 def check_zattrs(zarr_path: Path, expected: dict[str, Any]) -> None:
-    with (zarr_path / ".zattrs").open() as f:
+    with (zarr_path / "zarr.json").open() as f:
         data = json.load(f)
     assert data == expected
 
@@ -34,40 +34,47 @@ def check_full_res_copy(zarr_path: Path, group: zarr.Group, arr: da.Array) -> No
     check_zattrs(
         zarr_path,
         {
-            "multiscales": [
-                {
-                    "axes": [
-                        {"name": "x", "type": "space", "unit": "centimeter"},
-                        {"name": "y", "type": "space", "unit": "centimeter"},
-                        {"name": "z", "type": "space", "unit": "centimeter"},
-                    ],
-                    "datasets": [
+            "attributes": {
+                "ome": {
+                    "version": "0.5",
+                    "multiscales": [
                         {
-                            "coordinateTransformations": [
-                                {"scale": [3.0, 4.0, 5.0], "type": "scale"},
-                                {"translation": [1.5, 2.0, 2.5], "type": "translation"},
+                            "axes": [
+                                {"name": "x", "type": "space", "unit": "centimeter"},
+                                {"name": "y", "type": "space", "unit": "centimeter"},
+                                {"name": "z", "type": "space", "unit": "centimeter"},
                             ],
-                            "path": "0",
+                            "datasets": [
+                                {
+                                    "path": "0",
+                                    "coordinateTransformations": [
+                                        {"type": "scale", "scale": [3.0, 4.0, 5.0]},
+                                        {
+                                            "type": "translation",
+                                            "translation": [1.5, 2.0, 2.5],
+                                        },
+                                    ],
+                                }
+                            ],
+                            "metadata": {
+                                "description": "Downscaled using local mean "
+                                "in 2x2x2 blocks.",
+                                "method": "skimage.measure.block_reduce",
+                                "version": "0.24.0",
+                                "kwargs": {"block_size": 2, "func": "np.mean"},
+                            },
+                            "name": "my_zarr_group",
+                            "type": "local mean",
                         }
                     ],
-                    "metadata": {
-                        "description": "Downscaled using local mean in 2x2x2 blocks.",
-                        "kwargs": {"block_size": 2, "func": "np.mean"},
-                        "method": "skimage.measure.block_reduce",
-                        "version": "0.24.0",
-                    },
-                    "name": "my_zarr_group",
-                    "type": "local mean",
-                    "version": "0.4",
+                    "omero": None,
                 }
-            ],
-            "omero": None,
+            },
+            "zarr_format": 3,
+            "consolidated_metadata": None,
+            "node_type": "group",
         },
     )
-
-    with (zarr_path / ".zgroup").open() as f:
-        data = json.load(f)
-    assert data == {"zarr_format": 2}
 
 
 @pytest.fixture
@@ -80,7 +87,6 @@ def arr() -> da.Array:
 def test_workflow(tmp_path: Path, arr: da.Array) -> None:
     """Basic smoke test of the workflow as a user would use it."""
     chunk_size = 64
-    compressor = numcodecs.blosc.Blosc(cname="zstd", clevel=2, shuffle=2)
 
     zarr_path = tmp_path / "group.ome.zarr"
     group = MultiScaleGroup(
@@ -90,8 +96,14 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
         voxel_size=(3, 4, 5),
         array_spec=ArraySpec.from_array(
             arr,
-            chunks=(chunk_size, chunk_size, chunk_size),
-            compressor=dictify_codec(compressor),
+            chunk_grid=NamedConfig(
+                name="regular",
+                configuration={"chunk_shape": [chunk_size, chunk_size, chunk_size]},
+            ),
+            codecs=[
+                NamedConfig(name="bytes"),
+                NamedConfig(name="zstd", configuration={"level": 2}),
+            ],
         ),
     )
 
@@ -101,34 +113,45 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
     check_zattrs(
         zarr_path,
         {
-            "multiscales": [
-                {
-                    "axes": [
-                        {"name": "x", "type": "space", "unit": "centimeter"},
-                        {"name": "y", "type": "space", "unit": "centimeter"},
-                        {"name": "z", "type": "space", "unit": "centimeter"},
-                    ],
-                    "datasets": [
+            "attributes": {
+                "ome": {
+                    "version": "0.5",
+                    "multiscales": [
                         {
-                            "coordinateTransformations": [
-                                {"scale": [3.0, 4.0, 5.0], "type": "scale"},
-                                {"translation": [1.5, 2.0, 2.5], "type": "translation"},
+                            "axes": [
+                                {"name": "x", "type": "space", "unit": "centimeter"},
+                                {"name": "y", "type": "space", "unit": "centimeter"},
+                                {"name": "z", "type": "space", "unit": "centimeter"},
                             ],
-                            "path": "0",
+                            "datasets": [
+                                {
+                                    "path": "0",
+                                    "coordinateTransformations": [
+                                        {"type": "scale", "scale": [3.0, 4.0, 5.0]},
+                                        {
+                                            "type": "translation",
+                                            "translation": [1.5, 2.0, 2.5],
+                                        },
+                                    ],
+                                }
+                            ],
+                            "metadata": {
+                                "description": "Downscaled using local mean "
+                                "in 2x2x2 blocks.",
+                                "method": "skimage.measure.block_reduce",
+                                "version": "0.24.0",
+                                "kwargs": {"block_size": 2, "func": "np.mean"},
+                            },
+                            "name": "my_zarr_group",
+                            "type": "local mean",
                         }
                     ],
-                    "metadata": {
-                        "description": "Downscaled using local mean in 2x2x2 blocks.",
-                        "kwargs": {"block_size": 2, "func": "np.mean"},
-                        "method": "skimage.measure.block_reduce",
-                        "version": "0.24.0",
-                    },
-                    "name": "my_zarr_group",
-                    "type": "local mean",
-                    "version": "0.4",
+                    "omero": None,
                 }
-            ],
-            "omero": None,
+            },
+            "zarr_format": 3,
+            "consolidated_metadata": None,
+            "node_type": "group",
         },
     )
 
@@ -142,7 +165,7 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
     assert zarr_arr.chunks == (chunk_size, chunk_size, chunk_size)
     assert zarr_arr.shape == arr.shape
     assert zarr_arr.dtype == np.uint16
-    assert zarr_arr.compressor == compressor
+    assert zarr_arr.compressors == (zarr.codecs.ZstdCodec(level=2, checksum=False),)
     check_full_res_copy(zarr_path, group, arr)
 
     # Check that re-loading works
@@ -156,47 +179,101 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
     check_zattrs(
         zarr_path,
         {
-            "multiscales": [
-                {
-                    "axes": [
-                        {"name": "x", "type": "space", "unit": "centimeter"},
-                        {"name": "y", "type": "space", "unit": "centimeter"},
-                        {"name": "z", "type": "space", "unit": "centimeter"},
-                    ],
-                    "datasets": [
+            "attributes": {
+                "ome": {
+                    "version": "0.5",
+                    "multiscales": [
                         {
-                            "coordinateTransformations": [
-                                {"scale": [3.0, 4.0, 5.0], "type": "scale"},
-                                {"translation": [1.5, 2.0, 2.5], "type": "translation"},
+                            "axes": [
+                                {"name": "x", "type": "space", "unit": "centimeter"},
+                                {"name": "y", "type": "space", "unit": "centimeter"},
+                                {"name": "z", "type": "space", "unit": "centimeter"},
                             ],
-                            "path": "0",
-                        },
-                        {
-                            "coordinateTransformations": [
-                                {"scale": [6.0, 8.0, 10.0], "type": "scale"},
-                                {"translation": [3.0, 4.0, 5.0], "type": "translation"},
+                            "datasets": [
+                                {
+                                    "path": "0",
+                                    "coordinateTransformations": [
+                                        {"type": "scale", "scale": [3.0, 4.0, 5.0]},
+                                        {
+                                            "type": "translation",
+                                            "translation": [1.5, 2.0, 2.5],
+                                        },
+                                    ],
+                                },
+                                {
+                                    "path": "1",
+                                    "coordinateTransformations": [
+                                        {"type": "scale", "scale": [6.0, 8.0, 10.0]},
+                                        {
+                                            "type": "translation",
+                                            "translation": [3.0, 4.0, 5.0],
+                                        },
+                                    ],
+                                },
                             ],
-                            "path": "1",
-                        },
+                            "metadata": {
+                                "description": "Downscaled using local mean "
+                                "in 2x2x2 blocks.",
+                                "method": "skimage.measure.block_reduce",
+                                "version": "0.24.0",
+                                "kwargs": {"block_size": 2, "func": "np.mean"},
+                            },
+                            "name": "my_zarr_group",
+                            "type": "local mean",
+                        }
                     ],
-                    "metadata": {
-                        "description": "Downscaled using local mean in 2x2x2 blocks.",
-                        "kwargs": {"block_size": 2, "func": "np.mean"},
-                        "method": "skimage.measure.block_reduce",
-                        "version": "0.24.0",
-                    },
-                    "name": "my_zarr_group",
-                    "type": "local mean",
-                    "version": "0.4",
-                }
-            ],
-            "omero": None,
+                    "omero": None,
+                },
+                "multiscales": [
+                    {
+                        "axes": [
+                            {"name": "x", "type": "space", "unit": "centimeter"},
+                            {"name": "y", "type": "space", "unit": "centimeter"},
+                            {"name": "z", "type": "space", "unit": "centimeter"},
+                        ],
+                        "datasets": [
+                            {
+                                "path": "0",
+                                "coordinateTransformations": [
+                                    {"type": "scale", "scale": [3.0, 4.0, 5.0]},
+                                    {
+                                        "type": "translation",
+                                        "translation": [1.5, 2.0, 2.5],
+                                    },
+                                ],
+                            },
+                            {
+                                "path": "1",
+                                "coordinateTransformations": [
+                                    {"type": "scale", "scale": [6.0, 8.0, 10.0]},
+                                    {
+                                        "type": "translation",
+                                        "translation": [3.0, 4.0, 5.0],
+                                    },
+                                ],
+                            },
+                        ],
+                        "metadata": {
+                            "description": "Downscaled using local mean "
+                            "in 2x2x2 blocks.",
+                            "method": "skimage.measure.block_reduce",
+                            "version": "0.24.0",
+                            "kwargs": {"block_size": 2, "func": "np.mean"},
+                        },
+                        "name": "my_zarr_group",
+                        "type": "local mean",
+                    }
+                ],
+            },
+            "zarr_format": 3,
+            "consolidated_metadata": None,
+            "node_type": "group",
         },
     )
 
     # Validate
     zarr_group = zarr.open_group(zarr_path, mode="r")
-    ome_zarr_models.v04.Image.from_zarr(zarr_group)
+    ome_zarr_models.v05.Image.from_zarr(zarr_group)
 
     with pytest.raises(RuntimeError, match="Level 1 already found in zarr group"):
         group.add_downsample_level(1, n_processes=2)
@@ -216,7 +293,6 @@ def test_parallel_copy(tmp_path: Path, arr: da.Array) -> None:
 
     Simulates what happens on a compute cluster.
     """
-    compressor = numcodecs.blosc.Blosc(cname="zstd", clevel=2, shuffle=2)
     chunk_size = 64
     zarr_path = tmp_path / "group.ome.zarr"
     group = MultiScaleGroup(
@@ -226,8 +302,14 @@ def test_parallel_copy(tmp_path: Path, arr: da.Array) -> None:
         voxel_size=(3, 4, 5),
         array_spec=ArraySpec.from_array(
             arr,
-            chunks=(chunk_size, chunk_size, chunk_size),
-            compressor=dictify_codec(compressor),
+            chunk_grid=NamedConfig(
+                name="regular",
+                configuration={"chunk_shape": [chunk_size, chunk_size, chunk_size]},
+            ),
+            codecs=[
+                NamedConfig(name="bytes"),
+                NamedConfig(name="zstd", configuration={"level": 2}),
+            ],
         ),
     )
 
@@ -266,7 +348,10 @@ def test_wrong_chunksize(tmp_path: Path, arr: da.Array) -> None:
         voxel_size=(3, 4, 5),
         array_spec=ArraySpec.from_array(
             arr,
-            chunks=(chunk_size, chunk_size, chunk_size),
+            chunk_grid=NamedConfig(
+                name="regular",
+                configuration={"chunk_shape": [chunk_size, chunk_size, chunk_size]},
+            ),
         ),
     )
 
@@ -290,7 +375,13 @@ def test_known_data(tmp_path: Path) -> None:
         name="my_zarr_group",
         spatial_unit="centimeter",
         voxel_size=(3, 4, 5),
-        array_spec=ArraySpec.from_array(arr, chunks=(1, 1, 1)),
+        array_spec=ArraySpec.from_array(
+            arr,
+            chunk_grid=NamedConfig(
+                name="regular",
+                configuration={"chunk_shape": [1, 1, 1]},
+            ),
+        ),
     )
     group.add_full_res_data(arr, n_processes=1)
     group.add_downsample_level(1, n_processes=1)
@@ -310,85 +401,17 @@ def test_padding(tmp_path: Path) -> None:
         name="my_zarr_group",
         spatial_unit="centimeter",
         voxel_size=(3, 4, 5),
-        array_spec=ArraySpec.from_array(arr, chunks=(1, 1, 1)),
+        array_spec=ArraySpec.from_array(
+            arr,
+            chunk_grid=NamedConfig(
+                name="regular", configuration={"chunk_shape": [1, 1, 1]}
+            ),
+        ),
     )
     group.add_full_res_data(arr, n_processes=1)
     group.add_downsample_level(1, n_processes=1)
     arr_downsammpled = group[1]
     np.testing.assert_equal(arr_downsammpled[:], [[[3]], [[12]]])
-
-
-def test_fix_transform_order(tmp_path: Path) -> None:
-    zarr_path = (tmp_path / "zarr_group").resolve()
-    group = zarr.open_group(zarr_path, mode="w")
-    group.attrs.put(
-        {
-            "multiscales": [
-                {
-                    "axes": [
-                        {"name": "x", "type": "space", "unit": "centimeter"},
-                        {"name": "y", "type": "space", "unit": "centimeter"},
-                        {"name": "z", "type": "space", "unit": "centimeter"},
-                    ],
-                    "datasets": [
-                        {
-                            "coordinateTransformations": [
-                                # IMPORTANT: translation and scale wrong way round
-                                {"translation": [0.5, 0.5, 0.5], "type": "translation"},
-                                {"scale": [3.0, 4.0, 5.0], "type": "scale"},
-                            ],
-                            "path": "0",
-                        }
-                    ],
-                    "metadata": {
-                        "description": "Downscaled using local mean in 2x2x2 blocks.",
-                        "kwargs": {"block_size": 2, "func": "np.mean"},
-                        "method": "skimage.measure.block_reduce",
-                        "version": "0.24.0",
-                    },
-                    "name": "my_zarr_group",
-                    "type": "local mean",
-                    "version": "0.4",
-                }
-            ]
-        }
-    )
-
-    # This call should fix metadata
-    open_multiscale_group(zarr_path)
-    check_zattrs(
-        zarr_path,
-        {
-            "multiscales": [
-                {
-                    "axes": [
-                        {"name": "x", "type": "space", "unit": "centimeter"},
-                        {"name": "y", "type": "space", "unit": "centimeter"},
-                        {"name": "z", "type": "space", "unit": "centimeter"},
-                    ],
-                    "datasets": [
-                        {
-                            "coordinateTransformations": [
-                                # IMPORTANT: order now fixed
-                                {"scale": [3.0, 4.0, 5.0], "type": "scale"},
-                                {"translation": [1.5, 2.0, 2.5], "type": "translation"},
-                            ],
-                            "path": "0",
-                        }
-                    ],
-                    "metadata": {
-                        "description": "Downscaled using local mean in 2x2x2 blocks.",
-                        "kwargs": {"block_size": 2, "func": "np.mean"},
-                        "method": "skimage.measure.block_reduce",
-                        "version": "0.24.0",
-                    },
-                    "name": "my_zarr_group",
-                    "type": "local mean",
-                    "version": "0.4",
-                }
-            ]
-        },
-    )
 
 
 def test_bad_voxel_size(tmp_path: Path) -> None:
