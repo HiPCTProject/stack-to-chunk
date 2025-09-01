@@ -16,7 +16,7 @@ import skimage.color
 import skimage.data
 import tifffile
 from loguru import logger
-from pydantic_zarr.v2 import ArraySpec
+from pydantic_zarr.v3 import ArraySpec
 
 import stack_to_chunk
 
