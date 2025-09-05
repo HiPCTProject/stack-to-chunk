@@ -19,6 +19,8 @@ from pydantic_zarr.v3 import ArraySpec
 from stack_to_chunk._array_helpers import _copy_slab, _downsample_block
 from stack_to_chunk.ome_ngff import SPATIAL_UNIT, DatasetDict
 
+DIMENSION_NAMES = ("x", "y", "z")
+
 
 def memory_per_process(input_data: Array, *, chunk_size: int) -> int:
     """
@@ -92,15 +94,15 @@ class MultiScaleGroup:
                 "dimension_names set"
             )
             raise ValueError(msg)
-        array_spec = array_spec.model_copy(update={"dimension_names": ("x", "y", "z")})
+        array_spec = array_spec.model_copy(update={"dimension_names": DIMENSION_NAMES})
 
         self._image: Image = Image.new(
             array_specs=[array_spec],
             paths=["0"],
             axes=[
-                Axis(name="x", type="space", unit=self._spatial_unit),
-                Axis(name="y", type="space", unit=self._spatial_unit),
-                Axis(name="z", type="space", unit=self._spatial_unit),
+                Axis(name=DIMENSION_NAMES[0], type="space", unit=self._spatial_unit),
+                Axis(name=DIMENSION_NAMES[1], type="space", unit=self._spatial_unit),
+                Axis(name=DIMENSION_NAMES[2], type="space", unit=self._spatial_unit),
             ],
             name=self._name,
             multiscale_type="local mean",
@@ -273,6 +275,7 @@ class MultiScaleGroup:
             chunks=source_arr.chunks,
             dtype=source_arr.dtype,
             compressors=source_arr.compressors,
+            dimension_names=DIMENSION_NAMES,
         )
 
         block_indices = [
