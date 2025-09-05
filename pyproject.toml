@@ -24,7 +24,7 @@ dependencies = [
     "joblib==1.5.1",
     "loguru==0.7.3",
     "numpy==2.3.2",
-    "ome-zarr-models@git+https://github.com/ome-zarr-models/ome-zarr-models-py@ec49b7973f482a09eb5cd5d6ff145377b20ba8f1",
+    "ome-zarr-models==1.0.0",
     "pydantic-zarr==0.8.3",
     "scikit-image==0.25.2",
     "zarr==3.1.1",
