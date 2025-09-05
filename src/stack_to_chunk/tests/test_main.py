@@ -67,7 +67,6 @@ def check_full_res_copy(zarr_path: Path, group: zarr.Group, arr: da.Array) -> No
                             "type": "local mean",
                         }
                     ],
-                    "omero": None,
                 }
             },
             "zarr_format": 3,
@@ -146,7 +145,6 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
                             "type": "local mean",
                         }
                     ],
-                    "omero": None,
                 }
             },
             "zarr_format": 3,
@@ -222,7 +220,6 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
                             "type": "local mean",
                         }
                     ],
-                    "omero": None,
                 },
                 "multiscales": [
                     {
