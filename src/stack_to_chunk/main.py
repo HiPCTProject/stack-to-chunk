@@ -48,7 +48,8 @@ class MultiScaleGroup:
         Units of the voxel size.
     array_spec :
         Specification for initial dataset array. If opening an existing group
-        does not need to be provided.
+        does not need to be provided. Must not have dimension names set
+        (they are set automatically by stack-to-chunk).
 
     """
 
@@ -84,6 +85,14 @@ class MultiScaleGroup:
         if len(self._voxel_size) != 3:
             msg = "voxel_size must be length 3"
             raise ValueError(msg)
+
+        if array_spec.dimension_names is not None:
+            msg = (
+                "stack-to-chunk only works with ArraySpecs that do not have "
+                "dimension_names set"
+            )
+            raise ValueError(msg)
+        array_spec = array_spec.model_copy(update={"dimension_names": ("x", "y", "z")})
 
         self._image: Image = Image.new(
             array_specs=[array_spec],
