@@ -145,6 +145,16 @@ class MultiScaleGroup:
         self._image.to_zarr(store=self._store, path="/")
 
     @property
+    def _full_res_array(self) -> zarr.Array:
+        if "0" not in self._group:
+            msg = (
+                "Full resolution dataset not present. "
+                "Run `create_initial_datset()` first."
+            )
+            raise RuntimeError(msg)
+        return self._group["0"]
+
+    @property
     def levels(self) -> list[int]:
         """
         List of downsample levels currently stored.
@@ -153,6 +163,15 @@ class MultiScaleGroup:
         data downsampled by a factor of ``2**i``.
         """
         return sorted(int(k) for k in self._group)
+
+    @property
+    def chunk_size_z(self) -> int:
+        """
+        Get the chunk size along the z-axis.
+        """
+        arr = self._full_res_array
+        chunk_grid = arr.metadata.chunk_grid
+        return chunk_grid.chunk_shape[2]  # type: ignore[no-any-return]
 
     def __getitem__(self, level: int) -> zarr.Array:
         """
@@ -192,20 +211,11 @@ class MultiScaleGroup:
         zarr dataset.
 
         """
-        if "0" not in self._group:
-            msg = (
-                "Full resolution dataset not present. "
-                "Run `create_initial_datset()` first."
-            )
-            raise RuntimeError(msg)
-
-        chunk_size: int = self._group["0"].chunks[0]
-
         assert data.ndim == 3, "Input array is not 3-dimensional"
-        if start_z_idx % chunk_size != 0:
+        if start_z_idx % self.chunk_size_z != 0:
             msg = (
                 f"start_z_idx ({start_z_idx}) is not a multiple "
-                f"of chunk_size ({chunk_size})"
+                f"of chunk_size ({self.chunk_size_z})"
             )
             raise ValueError(msg)
 
@@ -220,18 +230,18 @@ class MultiScaleGroup:
         slice_size_bytes = (
             data.nbytes // data.size * data.chunksize[0] * data.chunksize[1]
         )
-        slab_size_bytes = slice_size_bytes * chunk_size
+        slab_size_bytes = slice_size_bytes * self.chunk_size_z
         logger.info(
             f"Each process will read ~{slab_size_bytes / 1e6:.02f} MB into memory"
         )
 
         nz = data.shape[2]
         slab_idxs: list[tuple[int, int]] = [
-            (z, min(z + chunk_size, nz)) for z in range(0, nz, chunk_size)
+            (z, min(z + self.chunk_size_z, nz)) for z in range(0, nz, self.chunk_size_z)
         ]
         all_args = [
             (
-                self._group["0"],
+                self._full_res_array,
                 data[:, :, zmin:zmax],
                 zmin + start_z_idx,
                 zmax + start_z_idx,
@@ -381,19 +391,3 @@ def open_multiscale_group(path: Path) -> MultiScaleGroup:
     return MultiScaleGroup(
         path, name=name, voxel_size=voxel_size, spatial_unit=spatial_unit
     )
-
-
-def _validate_dimension_names(
-    dimension_names: tuple[str | None, ...],
-) -> tuple[str, str, str]:
-    if any(dim_name is None for dim_name in dimension_names):
-        msg = "All dimension names on the ArraySpec must not be None"
-        raise ValueError(msg)
-    if len(dimension_names) != 3:
-        msg = (
-            f"Length of dimension names on the ArraySpec must be 3 "
-            f"(got {len(dimension_names)})"
-        )
-        raise ValueError(msg)
-
-    return dimension_names  # type: ignore[return-value]
