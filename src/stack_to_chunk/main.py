@@ -68,7 +68,7 @@ class MultiScaleGroup:
         self._path = path
         self._name = name
         self._spatial_unit = spatial_unit
-        self._voxel_size = voxel_size
+        self._voxel_size = self._validate_voxel_size(voxel_size)
 
         if isinstance(path, Path) and not path.exists():
             if array_spec is None:
@@ -78,26 +78,45 @@ class MultiScaleGroup:
 
         self._group = zarr.open_group(store=self._store, mode="r+")
 
+    @classmethod
+    def _validate_voxel_size(
+        cls, voxel_size: tuple[float, float, float]
+    ) -> tuple[float, float, float]:
+        if len(voxel_size) != 3:
+            msg = "voxel_size must be length 3"
+            raise ValueError(msg)
+        return voxel_size
+
+    @classmethod
+    def _validate_dimension_names(cls, array_spec: ArraySpec) -> tuple[str, str, str]:
+        dimension_names = array_spec.dimension_names
+        if dimension_names is None:
+            logger.info(
+                f"Dimension names not set on ArraySpec. Defaulting to "
+                f"{DEFAULT_DIMENSION_NAMES}"
+            )
+            return DEFAULT_DIMENSION_NAMES
+        if any(dim_name is None for dim_name in dimension_names):
+            msg = "All dimension names on the ArraySpec must not be None"
+            raise ValueError(msg)
+        if len(dimension_names) != 3:
+            msg = (
+                f"Length of dimension names on the ArraySpec must be 3 "
+                f"(got {len(dimension_names)})"
+            )
+            raise ValueError(msg)
+
+        return dimension_names  # type: ignore[no-any-return]
+
     def _create_zarr_group(self, array_spec: ArraySpec) -> None:
         """
         Create the zarr group.
 
         Saves a reference to the group on the ._group attribute.
         """
-        if len(self._voxel_size) != 3:
-            msg = "voxel_size must be length 3"
-            raise ValueError(msg)
-
-        if array_spec.dimension_names is None:
-            logger.info(
-                f"Dimension names not set on ArraySpec. Defaulting to "
-                f"{DEFAULT_DIMENSION_NAMES}"
-            )
-            dimension_names = DEFAULT_DIMENSION_NAMES
-        else:
-            dimension_names = _validate_dimension_names(array_spec.dimension_names)
-
+        dimension_names = self._validate_dimension_names(array_spec)
         array_spec = array_spec.model_copy(update={"dimension_names": dimension_names})
+
         self._image: Image = Image.new(
             array_specs=[array_spec],
             paths=["0"],
