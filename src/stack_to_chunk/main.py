@@ -381,19 +381,3 @@ def open_multiscale_group(path: Path) -> MultiScaleGroup:
     return MultiScaleGroup(
         path, name=name, voxel_size=voxel_size, spatial_unit=spatial_unit
     )
-
-
-def _validate_dimension_names(
-    dimension_names: tuple[str | None, ...],
-) -> tuple[str, str, str]:
-    if any(dim_name is None for dim_name in dimension_names):
-        msg = "All dimension names on the ArraySpec must not be None"
-        raise ValueError(msg)
-    if len(dimension_names) != 3:
-        msg = (
-            f"Length of dimension names on the ArraySpec must be 3 "
-            f"(got {len(dimension_names)})"
-        )
-        raise ValueError(msg)
-
-    return dimension_names  # type: ignore[return-value]
