@@ -17,7 +17,7 @@ from ome_zarr_models.v05 import Image
 from ome_zarr_models.v05.axes import Axis
 from pydantic_zarr.v3 import ArraySpec
 
-from stack_to_chunk._array_helpers import _copy_slab, _downsample_block
+from stack_to_chunk._array_helpers import _copy_slab, _downsample_slab
 from stack_to_chunk.ome_ngff import SPATIAL_UNIT, DatasetDict
 
 DEFAULT_DIMENSION_NAMES = ("x", "y", "z")
@@ -334,6 +334,7 @@ class MultiScaleGroup:
 
         """
         logger.info(f"Downsampling to level {level} with {n_processes=}")
+        # Validate level argument
         if not (level >= 1 and int(level) == level):
             msg = "level must be an integer >= 1"
             raise ValueError(msg)
@@ -349,24 +350,30 @@ class MultiScaleGroup:
                 msg,
             )
 
-        source_arr: zarr.Array = self._group[level_minus_one]
-        new_shape = tuple(math.ceil(i / 2) for i in source_arr.shape)
-        chunk_size = source_arr.chunks[0]
-
-        sink_arr = self._group.create_array(
-            name=level_str,
-            shape=new_shape,
-            chunks=source_arr.chunks,
-            dtype=source_arr.dtype,
-            compressors=source_arr.compressors,
-            dimension_names=source_arr.metadata.dimension_names,
+        source_arr = self._group[level_minus_one]
+        source_spec = ArraySpec.from_zarr(source_arr)
+        # Update array shape
+        new_shape = tuple(math.ceil(i / 2) for i in source_spec.shape)
+        # Update first two dimensions of chunk shape to match
+        new_chunk_grid = source_spec.chunk_grid.copy()
+        old_chunk_shape = new_chunk_grid["configuration"]["chunk_shape"]
+        inner_chunk_shape: tuple[int, ...] = source_spec.codecs[0]["configuration"][
+            "chunk_shape"
+        ]
+        new_chunk_grid["configuration"]["chunk_shape"] = (
+            inner_chunk_shape[0] * math.ceil(new_shape[0] / inner_chunk_shape[0]),
+            inner_chunk_shape[1] * math.ceil(new_shape[1] / inner_chunk_shape[1]),
+            old_chunk_shape[2],
         )
+        new_chunk_shape = new_chunk_grid["configuration"]["chunk_shape"]
+
+        sink_spec = source_spec.model_copy(
+            update={"shape": new_shape, "chunk_grid": new_chunk_grid}
+        )
+        sink_arr = sink_spec.to_zarr(store=self._group.store_path, path=level_str)
 
         block_indices = [
-            (x, y, z)
-            for x in range(0, source_arr.shape[0], chunk_size * 2)
-            for y in range(0, source_arr.shape[1], chunk_size * 2)
-            for z in range(0, source_arr.shape[2], chunk_size * 2)
+            z for z in range(0, source_spec.shape[2], new_chunk_shape[2] * 2)
         ]
 
         all_args = [(source_arr, sink_arr, idxs) for idxs in block_indices]
@@ -375,7 +382,7 @@ class MultiScaleGroup:
         blosc_use_threads = blosc.use_threads
         blosc.use_threads = 0
 
-        jobs = [_downsample_block(*args) for args in all_args]
+        jobs = [_downsample_slab(*args) for args in all_args]
         logger.info(f"Launching {len(jobs)} jobs")
         Parallel(n_jobs=n_processes, verbose=10)(jobs)
 

@@ -390,11 +390,13 @@ def test_known_data(tmp_path: Path) -> None:
 
 
 def test_padding(tmp_path: Path) -> None:
-    # Test data that doesn't fit exactly into (2, 2, 2) shaped chunks
+    """
+    Test data that doesn't fit exactly into (2, 2, 2) shaped chunks.
+    """
     arr_npy = np.arange(8).reshape((2, 2, 2))
+    # Add an extra bit of data on the end
     arr_npy = np.concatenate([arr_npy, [[[10, 10], [12, 16]]]], axis=0)
-    arr = da.from_array(arr_npy)
-    arr = arr.rechunk(chunks=(2, 2, 1))
+    arr = da.from_array(arr_npy, chunks=(2, 2, 1))
 
     group = MultiScaleGroup(
         tmp_path / "group.ome.zarr",
@@ -409,6 +411,7 @@ def test_padding(tmp_path: Path) -> None:
         ),
     )
     group.add_full_res_data(arr, n_processes=1)
+    np.testing.assert_equal(group[0][:], arr_npy)
     group.add_downsample_level(1, n_processes=1)
     arr_downsammpled = group[1]
     np.testing.assert_equal(arr_downsammpled[:], [[[3]], [[12]]])
