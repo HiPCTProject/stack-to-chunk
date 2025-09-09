@@ -77,7 +77,9 @@ group = stack_to_chunk.MultiScaleGroup(
     name="my_zarr_group",
     spatial_unit="centimeter",
     voxel_size=(3, 4, 5),
-    array_spec=ArraySpec.from_array(zarr.empty(images.shape, chunks=(16, 16, 16))),
+    array_spec=ArraySpec.from_array(
+        zarr.empty(images.shape, chunks=(16, 16, 16), dimension_names=("z", "y", "x"))
+    ),
 )
 print(group.levels)
 

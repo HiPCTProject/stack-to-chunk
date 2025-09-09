@@ -19,7 +19,7 @@ from pydantic_zarr.v3 import ArraySpec
 from stack_to_chunk._array_helpers import _copy_slab, _downsample_block
 from stack_to_chunk.ome_ngff import SPATIAL_UNIT, DatasetDict
 
-DIMENSION_NAMES = ("x", "y", "z")
+DEFAULT_DIMENSION_NAMES = ("x", "y", "z")
 
 
 def memory_per_process(input_data: Array, *, chunk_size: int) -> int:
@@ -88,21 +88,23 @@ class MultiScaleGroup:
             msg = "voxel_size must be length 3"
             raise ValueError(msg)
 
-        if array_spec.dimension_names is not None:
-            msg = (
-                "stack-to-chunk only works with ArraySpecs that do not have "
-                "dimension_names set"
+        if array_spec.dimension_names is None:
+            logger.info(
+                f"Dimension names not set on ArraySpec. Defaulting to "
+                f"{DEFAULT_DIMENSION_NAMES}"
             )
-            raise ValueError(msg)
-        array_spec = array_spec.model_copy(update={"dimension_names": DIMENSION_NAMES})
+            dimension_names = DEFAULT_DIMENSION_NAMES
+        else:
+            dimension_names = _validate_dimension_names(array_spec.dimension_names)
 
+        array_spec = array_spec.model_copy(update={"dimension_names": dimension_names})
         self._image: Image = Image.new(
             array_specs=[array_spec],
             paths=["0"],
             axes=[
-                Axis(name=DIMENSION_NAMES[0], type="space", unit=self._spatial_unit),
-                Axis(name=DIMENSION_NAMES[1], type="space", unit=self._spatial_unit),
-                Axis(name=DIMENSION_NAMES[2], type="space", unit=self._spatial_unit),
+                Axis(name=dimension_names[0], type="space", unit=self._spatial_unit),
+                Axis(name=dimension_names[1], type="space", unit=self._spatial_unit),
+                Axis(name=dimension_names[2], type="space", unit=self._spatial_unit),
             ],
             name=self._name,
             multiscale_type="local mean",
@@ -265,8 +267,8 @@ class MultiScaleGroup:
                 msg,
             )
 
-        source_arr = self._group[level_minus_one]
-        new_shape = (math.ceil(i / 2) for i in source_arr.shape)
+        source_arr: zarr.Array = self._group[level_minus_one]
+        new_shape = tuple(math.ceil(i / 2) for i in source_arr.shape)
         chunk_size = source_arr.chunks[0]
 
         sink_arr = self._group.create_array(
@@ -275,7 +277,7 @@ class MultiScaleGroup:
             chunks=source_arr.chunks,
             dtype=source_arr.dtype,
             compressors=source_arr.compressors,
-            dimension_names=DIMENSION_NAMES,
+            dimension_names=source_arr.metadata.dimension_names,
         )
 
         block_indices = [
@@ -360,3 +362,19 @@ def open_multiscale_group(path: Path) -> MultiScaleGroup:
     return MultiScaleGroup(
         path, name=name, voxel_size=voxel_size, spatial_unit=spatial_unit
     )
+
+
+def _validate_dimension_names(
+    dimension_names: tuple[str | None, ...],
+) -> tuple[str, str, str]:
+    if any(dim_name is None for dim_name in dimension_names):
+        msg = "All dimension names on the ArraySpec must not be None"
+        raise ValueError(msg)
+    if len(dimension_names) != 3:
+        msg = (
+            f"Length of dimension names on the ArraySpec must be 3 "
+            f"(got {len(dimension_names)})"
+        )
+        raise ValueError(msg)
+
+    return dimension_names  # type: ignore[return-value]
