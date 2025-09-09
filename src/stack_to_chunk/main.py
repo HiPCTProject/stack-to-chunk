@@ -2,21 +2,24 @@
 Main code for converting stacks to chunks.
 """
 
-from copy import deepcopy
+import math
 from pathlib import Path
 
 import numpy as np
 import zarr
+import zarr.storage
 from dask.array.core import Array
 from joblib import Parallel
 from loguru import logger
 from numcodecs import blosc
-from ome_zarr_models.v04 import Image
-from ome_zarr_models.v04.axes import Axis
-from pydantic_zarr.v2 import ArraySpec
+from ome_zarr_models.v05 import Image
+from ome_zarr_models.v05.axes import Axis
+from pydantic_zarr.v3 import ArraySpec
 
 from stack_to_chunk._array_helpers import _copy_slab, _downsample_block
 from stack_to_chunk.ome_ngff import SPATIAL_UNIT, DatasetDict
+
+DEFAULT_DIMENSION_NAMES = ("x", "y", "z")
 
 
 def memory_per_process(input_data: Array, *, chunk_size: int) -> int:
@@ -47,7 +50,8 @@ class MultiScaleGroup:
         Units of the voxel size.
     array_spec :
         Specification for initial dataset array. If opening an existing group
-        does not need to be provided.
+        does not need to be provided. Must not have dimension names set
+        (they are set automatically by stack-to-chunk).
 
     """
 
@@ -60,7 +64,7 @@ class MultiScaleGroup:
         spatial_unit: SPATIAL_UNIT,
         array_spec: ArraySpec | None = None,
     ) -> None:
-        self._store = zarr.DirectoryStore(path)
+        self._store = zarr.storage.LocalStore(path)
         self._path = path
         self._name = name
         self._spatial_unit = spatial_unit
@@ -84,13 +88,23 @@ class MultiScaleGroup:
             msg = "voxel_size must be length 3"
             raise ValueError(msg)
 
+        if array_spec.dimension_names is None:
+            logger.info(
+                f"Dimension names not set on ArraySpec. Defaulting to "
+                f"{DEFAULT_DIMENSION_NAMES}"
+            )
+            dimension_names = DEFAULT_DIMENSION_NAMES
+        else:
+            dimension_names = _validate_dimension_names(array_spec.dimension_names)
+
+        array_spec = array_spec.model_copy(update={"dimension_names": dimension_names})
         self._image: Image = Image.new(
             array_specs=[array_spec],
             paths=["0"],
             axes=[
-                Axis(name="x", type="space", unit=self._spatial_unit),
-                Axis(name="y", type="space", unit=self._spatial_unit),
-                Axis(name="z", type="space", unit=self._spatial_unit),
+                Axis(name=dimension_names[0], type="space", unit=self._spatial_unit),
+                Axis(name=dimension_names[1], type="space", unit=self._spatial_unit),
+                Axis(name=dimension_names[2], type="space", unit=self._spatial_unit),
             ],
             name=self._name,
             multiscale_type="local mean",
@@ -119,7 +133,7 @@ class MultiScaleGroup:
         Level 0 corresponds to full resolution data, and level ``i`` to
         data downsampled by a factor of ``2**i``.
         """
-        return [int(k) for k in self._group]
+        return sorted(int(k) for k in self._group)
 
     def __getitem__(self, level: int) -> zarr.Array:
         """
@@ -253,17 +267,17 @@ class MultiScaleGroup:
                 msg,
             )
 
-        source_arr = self._group[level_minus_one]
-        new_shape = np.ceil(np.array(source_arr.shape) / 2)
+        source_arr: zarr.Array = self._group[level_minus_one]
+        new_shape = tuple(math.ceil(i / 2) for i in source_arr.shape)
         chunk_size = source_arr.chunks[0]
 
-        sink_arr = self._group.create_dataset(
+        sink_arr = self._group.create_array(
             name=level_str,
             shape=new_shape,
             chunks=source_arr.chunks,
             dtype=source_arr.dtype,
-            compressor=source_arr.compressor,
-            dimension_separator="/",
+            compressors=source_arr.compressors,
+            dimension_names=source_arr.metadata.dimension_names,
         )
 
         block_indices = [
@@ -313,7 +327,7 @@ class MultiScaleGroup:
             ],
         }
 
-        multiscales = self._group.attrs["multiscales"][0]
+        multiscales = self._group.attrs["ome"]["multiscales"][0]
         existing_dataset_paths = [d["path"] for d in multiscales["datasets"]]
         if new_dataset["path"] in existing_dataset_paths:
             return
@@ -338,21 +352,10 @@ def open_multiscale_group(path: Path) -> MultiScaleGroup:
 
     """
     group = zarr.open_group(store=path, mode="r")
-    attrs = group.attrs.asdict()
-    multiscales = attrs["multiscales"][0]
+    ome_attrs = group.attrs.asdict()["ome"]
+    multiscales = ome_attrs["multiscales"][0]
     name = multiscales["name"]
     transforms = multiscales["datasets"][0]["coordinateTransformations"]
-
-    if transforms[1]["type"] == "scale":
-        logger.warning(
-            "Dataset is invalid, because the scale transform is not first. "
-            "Will attempt to fix metadata...",
-            stacklevel=1,
-        )
-        group = zarr.open_group(store=path, mode="a")
-        _fix_transform_order(group)
-        return open_multiscale_group(path)
-
     voxel_size = transforms[0]["scale"]
     spatial_unit = multiscales["axes"][0]["unit"]
 
@@ -361,27 +364,17 @@ def open_multiscale_group(path: Path) -> MultiScaleGroup:
     )
 
 
-def _fix_transform_order(group: zarr.Group) -> None:
-    attrs = group.attrs.asdict()
-    multiscales = deepcopy(attrs["multiscales"])
-    for i in range(len(multiscales[0]["datasets"])):
-        transforms = multiscales[0]["datasets"][i]["coordinateTransformations"]
-        if not (
-            len(transforms) == 2
-            and transforms[0]["type"] == "translation"
-            and transforms[1]["type"] == "scale"
-        ):
-            logger.error(
-                "Did not find a translation and scale transform (in that order)"
-            )
+def _validate_dimension_names(
+    dimension_names: tuple[str | None, ...],
+) -> tuple[str, str, str]:
+    if any(dim_name is None for dim_name in dimension_names):
+        msg = "All dimension names on the ArraySpec must not be None"
+        raise ValueError(msg)
+    if len(dimension_names) != 3:
+        msg = (
+            f"Length of dimension names on the ArraySpec must be 3 "
+            f"(got {len(dimension_names)})"
+        )
+        raise ValueError(msg)
 
-        # Flip order
-        translation = transforms[0]["translation"]
-        scale = transforms[1]["scale"]
-        translation = (np.array(translation) * np.array(scale)).tolist()
-        multiscales[0]["datasets"][i]["coordinateTransformations"] = [
-            {"type": "scale", "scale": scale},
-            {"type": "translation", "translation": translation},
-        ]
-
-    group.attrs.put({"multiscales": multiscales})
+    return dimension_names  # type: ignore[return-value]
