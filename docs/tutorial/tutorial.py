@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import skimage.color
 import skimage.data
 import tifffile
+import zarr
 from loguru import logger
 from pydantic_zarr.v3 import ArraySpec
 
@@ -76,7 +77,7 @@ group = stack_to_chunk.MultiScaleGroup(
     name="my_zarr_group",
     spatial_unit="centimeter",
     voxel_size=(3, 4, 5),
-    array_spec=ArraySpec.from_array(images, chunks=(16, 16, 16)),
+    array_spec=ArraySpec.from_array(zarr.empty(images.shape, chunks=(16, 16, 16))),
 )
 print(group.levels)
 
