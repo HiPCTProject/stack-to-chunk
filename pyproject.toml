@@ -21,7 +21,7 @@ classifiers = [
 ]
 dependencies = [
     "dask==2025.7.0",
-    "joblib==1.5.1",
+    "joblib==1.5.2",
     "loguru==0.7.3",
     "numpy==2.3.2",
     "ome-zarr-models==0.1.10",
