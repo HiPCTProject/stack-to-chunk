@@ -70,14 +70,19 @@ print(images)
 #
 # Once we've created it, the ``levels`` property shows that no levels have been added
 # to the group yet.
+#
+# We'll also enable logging here, so we can see that stack-to-chunk provides some
+# useful progress messages:
 
+logger.enable("stack_to_chunk")
+logger.add(sys.stdout, level="INFO")
 
 group = stack_to_chunk.MultiScaleGroup(
     temp_dir_path / "chunked.ome.zarr",
     name="my_zarr_group",
     spatial_unit="centimeter",
     voxel_size=(3, 4, 5),
-    array_spec=ArraySpec.from_array(
+    array_spec=ArraySpec.from_zarr(
         zarr.empty(images.shape, chunks=(16, 16, 16), dimension_names=("z", "y", "x"))
     ),
 )
@@ -91,12 +96,6 @@ print(group.levels)
 bytes_per_process = stack_to_chunk.memory_per_process(images, chunk_size=16)
 print(f"Each process will use {bytes_per_process / 1e6:.1f} MB")
 
-# %%
-# We'll also enable logging here, so we can see that stack-to-chunk provides some
-# useful progress messages:
-
-logger.enable("stack_to_chunk")
-logger.add(sys.stdout, level="INFO")
 
 # %%
 # And finally, lets create our first data copy:
