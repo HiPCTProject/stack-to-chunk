@@ -195,7 +195,8 @@ class MultiScaleGroup:
                 )
             ],
         )
-        self._image.to_zarr(store=self._store, path="/")
+        print("hi")
+        self._image.to_zarr(store=self._store, path="")
 
     @property
     def _full_res_array(self) -> zarr.Array:
