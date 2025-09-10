@@ -7,7 +7,6 @@ This page steps through going from a set of 2D image files to a
 """
 
 import pathlib
-import sys
 import tempfile
 
 import dask_image.imread
@@ -70,7 +69,11 @@ print(images)
 #
 # Once we've created it, the ``levels`` property shows that no levels have been added
 # to the group yet.
+#
+# We'll also enable logging here, so we can see that stack-to-chunk provides some
+# useful progress messages:
 
+logger.enable("stack_to_chunk")
 
 group = stack_to_chunk.MultiScaleGroup(
     temp_dir_path / "chunked.ome.zarr",
@@ -91,12 +94,6 @@ print(group.levels)
 bytes_per_process = stack_to_chunk.memory_per_process(images, chunk_size=16)
 print(f"Each process will use {bytes_per_process / 1e6:.1f} MB")
 
-# %%
-# We'll also enable logging here, so we can see that stack-to-chunk provides some
-# useful progress messages:
-
-logger.enable("stack_to_chunk")
-logger.add(sys.stdout, level="INFO")
 
 # %%
 # And finally, lets create our first data copy:
