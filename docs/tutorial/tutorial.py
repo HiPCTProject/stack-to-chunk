@@ -7,6 +7,7 @@ This page steps through going from a set of 2D image files to a
 """
 
 import pathlib
+import sys
 import tempfile
 
 import dask_image.imread
@@ -74,6 +75,7 @@ print(images)
 # useful progress messages:
 
 logger.enable("stack_to_chunk")
+logger.add(sys.stdout, level="INFO")
 
 group = stack_to_chunk.MultiScaleGroup(
     temp_dir_path / "chunked.ome.zarr",
