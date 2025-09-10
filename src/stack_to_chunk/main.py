@@ -70,13 +70,14 @@ class MultiScaleGroup:
         spatial_unit: SPATIAL_UNIT,
         array_spec: ArraySpec | None = None,
     ) -> None:
+        path = Path(path).resolve()
         self._store = zarr.storage.LocalStore(path)
         self._path = path
         self._name = name
         self._spatial_unit = spatial_unit
         self._voxel_size = self._validate_voxel_size(voxel_size)
 
-        if isinstance(path, Path) and not path.exists():
+        if not path.exists():
             if array_spec is None:
                 msg = "Group does not already exist, array_spec must be provided"
                 raise ValueError(msg)
@@ -193,7 +194,8 @@ class MultiScaleGroup:
                 )
             ],
         )
-        self._image.to_zarr(store=self._store, path="/")
+        print("hi")
+        self._image.to_zarr(store=self._store, path="")
 
     @property
     def _full_res_array(self) -> zarr.Array:
