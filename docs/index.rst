@@ -23,7 +23,7 @@ Installing
 ----------
 
 ``stack-to-chunk`` is designed to be used as a tool, which means its dependencies are pinned to exact versions.
-For this reason it's recommended to install ``stack-to-chunk`` in it's own virtual environment.
+For this reason, it's recommended to install ``stack-to-chunk`` in its own virtual environment.
 This is easy to do with `virtual environments <https://docs.astral.sh/uv/pip/environments/>`_ using the `uv <https://docs.astral.sh/uv/>`_ Python package and project manager.
 
 ``stack-to-chunk`` can be installed using pip:
