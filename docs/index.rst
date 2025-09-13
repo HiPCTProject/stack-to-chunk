@@ -22,7 +22,7 @@ Convert stacks of images to a chunked zarr dataset. Specifically this code is wr
 Installing
 ----------
 
-``stack-to-chunk`` is designed to be used as a tool, which means it's dependencies are pinned to exact versions.
+``stack-to-chunk`` is designed to be used as a tool, which means its dependencies are pinned to exact versions.
 For this reason it's recommended to install ``stack-to-chunk`` in it's own virtual environment.
 This is easy to do with `virtual environments <https://docs.astral.sh/uv/pip/environments/>`_ using the `uv <https://docs.astral.sh/uv/>`_ Python package and project manager.
 
