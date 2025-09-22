@@ -20,7 +20,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "dask==2025.9.0",
+    "dask==2025.9.1",
     "joblib==1.5.2",
     "loguru==0.7.3",
     "numpy==2.3.3",
