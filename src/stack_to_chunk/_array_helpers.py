@@ -34,13 +34,11 @@ def _copy_slab(arr_zarr: zarr.Array, slab: da.Array, zstart: int, zend: int) -> 
 
 
 @delayed  # type: ignore[misc]
-def _downsample_block(
-    arr_in: zarr.Array, arr_out: zarr.Array, block_idx: tuple[int, int, int]
-) -> None:
+def _downsample_slab(arr_in: zarr.Array, arr_out: zarr.Array, block_idx_z: int) -> None:
     """
-    Copy a single block from one array to the next, downsampling by a factor of two.
+    Copy a single slab from one array to the next, downsampling by a factor of two.
 
-    Data is copied from a block starting at `block_idx` and ending at
+    Data is copied from a slab starting at `block_idx` and ending at
     `block_idx + 2 * arr_in.chunks`, ie a cube of (2, 2, 2) chunks.
     Data is downsampled using local mean, and writen to a single chunk in `arr_out`.
 
@@ -54,17 +52,15 @@ def _downsample_block(
         Index of block to copy. Must be a multiple of swice the chunk size of `arr_in`.
 
     """
-    chunk_size = arr_in.chunks[0] * 2
-    np.testing.assert_equal(
-        np.array(block_idx) % chunk_size,
-        np.array([0, 0, 0]),
-        err_msg=f"Block index {block_idx} not aligned with chunks {chunk_size}",
-    )
+    chunk_size = arr_in.shards[2] * 2
+    if block_idx_z % chunk_size != 0:
+        msg = f"Block index {block_idx_z} not aligned with chunks {chunk_size}"
+        raise ValueError(msg)
 
     data = arr_in[
-        block_idx[0] : block_idx[0] + chunk_size,
-        block_idx[1] : block_idx[1] + chunk_size,
-        block_idx[2] : block_idx[2] + chunk_size,
+        :,
+        :,
+        block_idx_z : block_idx_z + chunk_size,
     ]
     # Pad to an even number
     pads = np.array(data.shape) % 2
@@ -72,10 +68,10 @@ def _downsample_block(
     data = np.pad(data, pad_width, mode="edge")
     data = skimage.measure.block_reduce(data, block_size=2, func=np.mean)
 
-    block_idx_out = np.array(block_idx) // 2
+    block_idx_out = block_idx_z // 2
     chunk_size_out = chunk_size // 2
     arr_out[
-        block_idx_out[0] : block_idx_out[0] + chunk_size_out,
-        block_idx_out[1] : block_idx_out[1] + chunk_size_out,
-        block_idx_out[2] : block_idx_out[2] + chunk_size_out,
+        :,
+        :,
+        block_idx_out : block_idx_out + chunk_size_out,
     ] = data
