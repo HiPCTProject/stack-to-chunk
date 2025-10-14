@@ -25,7 +25,7 @@ dependencies = [
     "loguru==0.7.3",
     "numpy==2.3.3",
     "ome-zarr-models==0.1.10",
-    "pydantic-zarr==0.8.4",
+    "pydantic-zarr==0.7.0",
     "scikit-image==0.25.2",
     "zarr==2.18.7",
     "numcodecs==0.15.1",
