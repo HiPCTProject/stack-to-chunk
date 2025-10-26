@@ -160,6 +160,9 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
     )
 
     zarr_arr = zarr.open(zarr_path / "0")
+    assert zarr_arr.shards[0] / chunk_size == (zarr_arr.shape[0] // chunk_size) + 1
+    assert zarr_arr.shards[1] / chunk_size == (zarr_arr.shape[1] // chunk_size) + 1
+    assert zarr_arr.shards[2] == chunk_size
     assert zarr_arr.chunks == (chunk_size, chunk_size, chunk_size)
     assert zarr_arr.shape == arr.shape
     assert zarr_arr.dtype == np.uint16

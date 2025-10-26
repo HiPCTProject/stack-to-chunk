@@ -69,5 +69,5 @@ trailing_comma_inline_array = true
 overrides."project.classifiers".inline_arrays = false
 overrides."tool.coverage.paths.source".inline_arrays = false
 
-[tool.uv]
-dev-dependencies = ["pre-commit>=3.8.0", "pytest-cov>=5.0.0", "pytest>=8.3.2"]
+[dependency-groups]
+dev = ["pre-commit>=3.8.0", "pytest-cov>=5.0.0", "pytest>=8.3.2"]
