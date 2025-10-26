@@ -3,6 +3,7 @@ Main code for converting stacks to chunks.
 """
 
 import math
+from os import PathLike
 from pathlib import Path
 
 import numpy as np
@@ -53,24 +54,31 @@ class MultiScaleGroup:
         does not need to be provided. Must not have dimension names set
         (they are set automatically by stack-to-chunk).
 
+    Warnings
+    --------
+    stack-to-chunk adds sharding to the output, so it's recommended that the
+    array specification passed here does not already include a sharding codec
+    (if it does, there will be nested shards!)
+
     """
 
     def __init__(
         self,
-        path: Path,
+        path: PathLike[str],
         *,
         name: str,
         voxel_size: tuple[float, float, float],
         spatial_unit: SPATIAL_UNIT,
         array_spec: ArraySpec | None = None,
     ) -> None:
+        path = Path(path).resolve()
         self._store = zarr.storage.LocalStore(path)
         self._path = path
         self._name = name
         self._spatial_unit = spatial_unit
         self._voxel_size = self._validate_voxel_size(voxel_size)
 
-        if isinstance(path, Path) and not path.exists():
+        if not path.exists():
             if array_spec is None:
                 msg = "Group does not already exist, array_spec must be provided"
                 raise ValueError(msg)
@@ -108,6 +116,50 @@ class MultiScaleGroup:
 
         return dimension_names  # type: ignore[no-any-return]
 
+    @classmethod
+    def _add_sharding_codec(cls, array_spec: ArraySpec) -> ArraySpec:
+        """
+        Add a sharding codec to an array spec.
+
+        The shard size is set to span the first two dimensions, but only
+        to be as 'thick' as the chunk size in the third dimension.
+        """
+        shape = array_spec.shape
+        chunk_grid = array_spec.chunk_grid.copy()
+        old_chunk_shape = chunk_grid["configuration"]["chunk_shape"]
+        shard_shape = (
+            # Because the chunk shape needs to divide the shard shape exactly,
+            # round up shard shape to nearest multiple
+            old_chunk_shape[0] * math.ceil(shape[0] / old_chunk_shape[0]),
+            old_chunk_shape[1] * math.ceil(shape[1] / old_chunk_shape[1]),
+            old_chunk_shape[2],
+        )
+
+        old_codecs = array_spec.codecs
+        new_codecs = [
+            {
+                "name": "sharding_indexed",
+                "configuration": {
+                    "chunk_shape": old_chunk_shape,
+                    "codecs": old_codecs,
+                    "index_codecs": [
+                        {
+                            "name": "bytes",
+                            "configuration": {
+                                "endian": "little",
+                            },
+                        },
+                        {"name": "crc32c"},
+                    ],
+                    "index_location": "end",
+                },
+            }
+        ]
+
+        chunk_grid["configuration"]["chunk_shape"] = shard_shape
+        logger.info(f"Adding sharding codec with shard shape {shard_shape}")
+        return array_spec.model_copy(update={"codecs": new_codecs})
+
     def _create_zarr_group(self, array_spec: ArraySpec) -> None:
         """
         Create the zarr group.
@@ -116,6 +168,7 @@ class MultiScaleGroup:
         """
         dimension_names = self._validate_dimension_names(array_spec)
         array_spec = array_spec.model_copy(update={"dimension_names": dimension_names})
+        array_spec = self._add_sharding_codec(array_spec)
 
         self._image: Image = Image.new(
             array_specs=[array_spec],
