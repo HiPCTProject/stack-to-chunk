@@ -99,10 +99,10 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
                 name="regular",
                 configuration={"chunk_shape": [chunk_size, chunk_size, chunk_size]},
             ),
-            codecs=[
+            codecs=(
                 NamedConfig(name="bytes"),
                 NamedConfig(name="zstd", configuration={"level": 2}),
-            ],
+            ),
         ),
     )
 
@@ -160,11 +160,9 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
     )
 
     zarr_arr = zarr.open(zarr_path / "0")
-    assert zarr_arr.shards[0] / chunk_size == (zarr_arr.shape[0] // chunk_size) + 1
-    assert zarr_arr.shards[1] / chunk_size == (zarr_arr.shape[1] // chunk_size) + 1
-    assert zarr_arr.shards[2] == chunk_size
-    assert zarr_arr.chunks == (chunk_size, chunk_size, chunk_size)
-    assert zarr_arr.shape == arr.shape
+    assert zarr_arr.shape == (583, 245, 156)
+    assert zarr_arr.shards == (640, 256, 64)
+    assert zarr_arr.chunks == (64, 64, 64)
     assert zarr_arr.dtype == np.uint16
     assert zarr_arr.compressors == (zarr.codecs.ZstdCodec(level=2, checksum=False),)
     check_full_res_copy(zarr_path, group, arr)
@@ -176,6 +174,11 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
 
     group.add_downsample_level(1, n_processes=2)
     assert group.levels == [0, 1]
+
+    zarr_arr = zarr.open(zarr_path / "1")
+    assert zarr_arr.shape == (292, 123, 78)
+    assert zarr_arr.shards == (192, 64, 64)
+    assert zarr_arr.chunks == (64, 64, 64)
 
     check_zattrs(
         zarr_path,
@@ -306,10 +309,10 @@ def test_parallel_copy(tmp_path: Path, arr: da.Array) -> None:
                 name="regular",
                 configuration={"chunk_shape": [chunk_size, chunk_size, chunk_size]},
             ),
-            codecs=[
+            codecs=(
                 NamedConfig(name="bytes"),
                 NamedConfig(name="zstd", configuration={"level": 2}),
-            ],
+            ),
         ),
     )
 

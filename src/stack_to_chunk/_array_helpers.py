@@ -51,31 +51,38 @@ def _downsample_block(
     arr_out :
         Output array. Must have the same chunk shape as `arr_in`.
     block_idx :
-        Index of block to copy. Must be a multiple of swice the chunk size of `arr_in`.
+        Index of block to copy. Must be a multiple of the shard shape in `arr_out`.
 
     """
-    chunk_size = arr_in.chunks[0] * 2
+    shard_shape: tuple[int, int, int] = arr_out.shards
     np.testing.assert_equal(
-        np.array(block_idx) % chunk_size,
+        np.array(block_idx) % np.array(shard_shape),
         np.array([0, 0, 0]),
-        err_msg=f"Block index {block_idx} not aligned with chunks {chunk_size}",
+        err_msg=f"Block index {block_idx} not aligned with shards {shard_shape}",
     )
 
-    data = arr_in[
-        block_idx[0] : block_idx[0] + chunk_size,
-        block_idx[1] : block_idx[1] + chunk_size,
-        block_idx[2] : block_idx[2] + chunk_size,
-    ]
+    in_slice = (
+        slice(
+            block_idx[0] * 2, min((block_idx[0] + shard_shape[0]) * 2, arr_in.shape[0])
+        ),
+        slice(
+            block_idx[1] * 2, min((block_idx[1] + shard_shape[1]) * 2, arr_in.shape[1])
+        ),
+        slice(
+            block_idx[2] * 2, min((block_idx[2] + shard_shape[2]) * 2, arr_in.shape[2])
+        ),
+    )
+    data = arr_in[in_slice]
+
     # Pad to an even number
     pads = np.array(data.shape) % 2
     pad_width = [(0, p) for p in pads]
     data = np.pad(data, pad_width, mode="edge")
     data = skimage.measure.block_reduce(data, block_size=2, func=np.mean)
 
-    block_idx_out = np.array(block_idx) // 2
-    chunk_size_out = chunk_size // 2
-    arr_out[
-        block_idx_out[0] : block_idx_out[0] + chunk_size_out,
-        block_idx_out[1] : block_idx_out[1] + chunk_size_out,
-        block_idx_out[2] : block_idx_out[2] + chunk_size_out,
-    ] = data
+    out_slice = (
+        slice(block_idx[0], min((block_idx[0] + shard_shape[0]), arr_out.shape[0])),
+        slice(block_idx[1], min((block_idx[1] + shard_shape[1]), arr_out.shape[1])),
+        slice(block_idx[2], min((block_idx[2] + shard_shape[2]), arr_out.shape[2])),
+    )
+    arr_out[out_slice] = data
