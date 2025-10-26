@@ -312,7 +312,7 @@ class MultiScaleGroup:
         blosc.use_threads = blosc_use_threads
         logger.info("Finished full resolution copy to zarr.")
 
-    def add_downsample_level(self, level: int, *, n_processes: int) -> None:
+    def add_downsample_level(self, level: int, *, n_processes: int = 1) -> None:
         """
         Add a level of downsampling.
 
@@ -324,13 +324,16 @@ class MultiScaleGroup:
         n_processes :
             Number of parallel processes to use to read/write data. See the
             joblib.Parallel documentation for more info of allowed values.
-            In particluar, you can set ``n_processes=-1`` to get joblib to use
-            all available CPUs.
+            Running with one process (the default) will use about 5/8 the amount of
+            memory of a single slab/shard.
 
         Notes
         -----
         To add level ``i`` to the zarr group, level ``i - 1`` must first have been
         added.
+
+        Running this with one process will use about 5/8 the amount of memory of a
+        single slab/shard.
 
         """
         logger.info(f"Downsampling to level {level} with {n_processes=}")
@@ -350,23 +353,34 @@ class MultiScaleGroup:
             )
 
         source_arr: zarr.Array = self._group[level_minus_one]
+        source_chunk_shape = source_arr.chunks
+
         new_shape = tuple(math.ceil(i / 2) for i in source_arr.shape)
-        chunk_size = source_arr.chunks[0]
+        new_shard_shape = (
+            # Because the chunk shape needs to divide the shard shape exactly,
+            # round up shard shape to nearest multiple
+            source_chunk_shape[0] * math.ceil(new_shape[0] / 2 / source_chunk_shape[0]),
+            source_chunk_shape[1] * math.ceil(new_shape[1] / 2 / source_chunk_shape[1]),
+            source_chunk_shape[2],
+        )
 
         sink_arr = self._group.create_array(
             name=level_str,
             shape=new_shape,
+            shards=new_shard_shape,
             chunks=source_arr.chunks,
             dtype=source_arr.dtype,
             compressors=source_arr.compressors,
             dimension_names=source_arr.metadata.dimension_names,
         )
+        assert sink_arr.shards is not None
 
+        # Get slice of every shard in the sink array
         block_indices = [
             (x, y, z)
-            for x in range(0, source_arr.shape[0], chunk_size * 2)
-            for y in range(0, source_arr.shape[1], chunk_size * 2)
-            for z in range(0, source_arr.shape[2], chunk_size * 2)
+            for x in range(0, sink_arr.shape[0], sink_arr.shards[0])
+            for y in range(0, sink_arr.shape[1], sink_arr.shards[1])
+            for z in range(0, sink_arr.shape[2], sink_arr.shards[2])
         ]
 
         all_args = [(source_arr, sink_arr, idxs) for idxs in block_indices]
