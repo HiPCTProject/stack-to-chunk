@@ -35,3 +35,14 @@ This is easy to do with `virtual environments <https://docs.astral.sh/uv/pip/env
 Changelog
 ---------
 See https://github.com/HiPCTProject/stack-to-chunk/releases for the list of tags and a changelog for each one.
+
+Version 2
+~~~~~~~~~
+
+Version 2 of ``stack-to-chunk`` is a major breaking release to add support for OME-Zarr version 0.5 (and therefore Zarr version 3).
+The following are major changes to the library:
+
+- ``stack-to-chunk`` automatically adds sharding to the resulting data.
+   See the guide page for more information on how this works.
+- ``memory_per_process`` has been renamed ``memory_per_slab_process``, as it calculates the memory required to copy a single slab of data.
+- A new function, ``memory_per_downsample_process`` has also been added to calculate the minimum memory required in a downsampling process.

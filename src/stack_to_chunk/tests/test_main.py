@@ -13,7 +13,12 @@ import zarr
 import zarr.codecs
 from pydantic_zarr.v3 import ArraySpec, NamedConfig
 
-from stack_to_chunk import MultiScaleGroup, memory_per_process, open_multiscale_group
+from stack_to_chunk import (
+    MultiScaleGroup,
+    memory_per_slab_process,
+    open_multiscale_group,
+)
+from stack_to_chunk.main import memory_per_downsample_process
 
 
 def check_zattrs(zarr_path: Path, expected: dict[str, Any]) -> None:
@@ -153,7 +158,7 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
         },
     )
 
-    assert memory_per_process(arr, chunk_size=chunk_size) == 18282880
+    assert memory_per_slab_process(arr, chunk_size=chunk_size) == 18282880
     group.add_full_res_data(
         arr,
         n_processes=1,
@@ -172,6 +177,7 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
     group = open_multiscale_group(zarr_path)
     assert group.levels == [0]
 
+    assert memory_per_downsample_process(group) == 18282880
     group.add_downsample_level(1, n_processes=2)
     assert group.levels == [0, 1]
 
