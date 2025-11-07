@@ -93,7 +93,7 @@ print(group.levels)
 # without any downsampling. Before doing this lets do a quick check of how much memory
 # each process will take up when we run stack-to-chunk:
 
-bytes_per_process = stack_to_chunk.memory_per_process(images, chunk_size=16)
+bytes_per_process = stack_to_chunk.memory_per_slab_process(images, chunk_size=16)
 print(f"Each process will use {bytes_per_process / 1e6:.1f} MB")
 
 

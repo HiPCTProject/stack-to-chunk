@@ -23,9 +23,9 @@ from stack_to_chunk.ome_ngff import SPATIAL_UNIT, DatasetDict
 DEFAULT_DIMENSION_NAMES = ("x", "y", "z")
 
 
-def memory_per_process(input_data: Array, *, chunk_size: int) -> int:
+def memory_per_slab_process(input_data: Array, *, chunk_size: int) -> int:
     """
-    The amount of memory each stack-to-chunk process will use (in bytes).
+    The amount of memory each stack-to-chunk slab copying process will use (in bytes).
 
     This is a lower bound on memory use, equal to the size of a slab of data with size
     (nx, ny, chunk_size), where (nx, ny) is the shape of a single input
@@ -33,6 +33,17 @@ def memory_per_process(input_data: Array, *, chunk_size: int) -> int:
     """
     itemsize = np.dtype(input_data.dtype).itemsize
     return int(input_data.shape[0] * input_data.shape[1] * itemsize * chunk_size)
+
+
+def memory_per_downsample_process(input_group: "MultiScaleGroup") -> int:
+    """
+    The amount of memory each stack-to-chunk downsampling process will use (in bytes).
+
+    This is a lower bound on memory use.
+    """
+    source_arr: zarr.Array = input_group._group["0"]  # noqa: SLF001
+    mem_per_slab = memory_per_slab_process(source_arr, chunk_size=source_arr.shards[2])
+    return math.ceil(mem_per_slab * 5 / 8)
 
 
 class MultiScaleGroup:
