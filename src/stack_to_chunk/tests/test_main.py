@@ -177,7 +177,7 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
     group = open_multiscale_group(zarr_path)
     assert group.levels == [0]
 
-    assert memory_per_downsample_process(group) == 18282880
+    assert memory_per_downsample_process(group) == 11426800
     group.add_downsample_level(1, n_processes=2)
     assert group.levels == [0, 1]
 
