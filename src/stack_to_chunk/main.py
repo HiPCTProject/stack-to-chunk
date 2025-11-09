@@ -402,7 +402,7 @@ class MultiScaleGroup:
 
         jobs = [_downsample_block(*args) for args in all_args]
         logger.info(f"Launching {len(jobs)} jobs")
-        Parallel(n_jobs=n_processes, verbose=10)(jobs)
+        Parallel(n_jobs=n_processes)(jobs)
 
         self._add_level_metadata(level)
         blosc.use_threads = blosc_use_threads
