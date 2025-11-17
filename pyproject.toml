@@ -20,10 +20,10 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "dask==2025.10.0",
+    "dask==2025.11.0",
     "joblib==1.5.2",
     "loguru==0.7.3",
-    "numpy==2.3.4",
+    "numpy==2.3.5",
     "ome-zarr-models==1.0.0",
     "pydantic-zarr==0.8.4",
     "scikit-image==0.25.2",
