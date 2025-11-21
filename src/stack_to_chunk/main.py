@@ -206,6 +206,7 @@ class MultiScaleGroup:
                 )
             ],
         )
+        print(self._image.members)
         self._image.to_zarr(store=self._store, path="/")
 
     @property
@@ -213,7 +214,7 @@ class MultiScaleGroup:
         if "0" not in self._group:
             msg = (
                 "Full resolution dataset not present. "
-                "Run `create_initial_datset()` first."
+                "Run `create_initial_dataset()` first."
             )
             raise RuntimeError(msg)
         return self._group["0"]
