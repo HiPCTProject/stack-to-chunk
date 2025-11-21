@@ -207,7 +207,9 @@ class MultiScaleGroup:
             ],
         )
         print(self._image.members)
-        self._image.to_zarr(store=self._store, path="/")
+        group = self._image.to_zarr(store=self._store, path="/")
+        assert "0" in group, "Did not find path '0' in group"
+
 
     @property
     def _full_res_array(self) -> zarr.Array:
