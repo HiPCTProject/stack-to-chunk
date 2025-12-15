@@ -29,6 +29,7 @@ dependencies = [
     "scikit-image==0.25.2",
     "zarr==3.1.1",
     "numcodecs==0.15.1",
+    "tensorstore==0.1.80"
 ]
 
 optional-dependencies = { dev = [

@@ -1,13 +1,16 @@
+from pathlib import Path
+
 import dask.array as da
 import numpy as np
 import skimage.measure
+import tensorstore as ts
 import zarr
 from joblib import delayed
 from loguru import logger
 
 
 @delayed  # type: ignore[misc]
-def _copy_slab(arr_zarr: zarr.Array, slab: da.Array, zstart: int, zend: int) -> None:
+def _copy_slab(arr_path: Path, slab: da.Array, zstart: int, zend: int) -> None:
     """
     Copy a single slab of data to a zarr array.
 
@@ -29,7 +32,17 @@ def _copy_slab(arr_zarr: zarr.Array, slab: da.Array, zstart: int, zend: int) -> 
 
     logger.info(f"Writing z={zstart} -> {zend - 1}")
     # Write out data
-    arr_zarr[:, :, zstart:zend] = data
+    arr_zarr = ts.open(
+        {
+            "driver": "zarr3",
+            "kvstore": {
+                "driver": "file",
+                "path": str(arr_path),
+            },
+            "open": True,
+        }
+    ).result()
+    arr_zarr[:, :, zstart:zend].write(data).result()
     logger.info(f"Finished copying z={zstart} -> {zend - 1}")
 
 

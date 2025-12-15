@@ -305,7 +305,7 @@ class MultiScaleGroup:
         ]
         all_args = [
             (
-                self._full_res_array,
+                self._path / "0",
                 data[:, :, zmin:zmax],
                 zmin + start_z_idx,
                 zmax + start_z_idx,
