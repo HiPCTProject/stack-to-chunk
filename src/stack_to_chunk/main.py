@@ -387,14 +387,17 @@ class MultiScaleGroup:
         assert sink_arr.shards is not None
 
         # Get slice of every shard in the sink array
-        block_indices = [
+        block_indices: list[tuple[int, int, int]] = [
             (x, y, z)
             for x in range(0, sink_arr.shape[0], sink_arr.shards[0])
             for y in range(0, sink_arr.shape[1], sink_arr.shards[1])
             for z in range(0, sink_arr.shape[2], sink_arr.shards[2])
         ]
 
-        all_args = [(source_arr, sink_arr, idxs) for idxs in block_indices]
+        all_args: list[tuple[Path, Path, tuple[int, int, int]]] = [
+            (self._path / str(level_minus_one), self._path / level_str, idxs)
+            for idxs in block_indices
+        ]
 
         logger.info(f"Starting downsampling from level {level_minus_one} > {level}...")
         blosc_use_threads = blosc.use_threads
