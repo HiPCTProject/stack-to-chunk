@@ -6,6 +6,7 @@ __all__ = [
     "__version__",
     "memory_per_downsample_process",
     "memory_per_slab_process",
+    "mode",
     "open_multiscale_group",
 ]
 
@@ -16,6 +17,7 @@ from .main import (
     MultiScaleGroup,
     memory_per_downsample_process,
     memory_per_slab_process,
+    mode,
     open_multiscale_group,
 )
 from .ome_ngff import SPATIAL_UNIT

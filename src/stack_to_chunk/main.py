@@ -3,10 +3,13 @@ Main code for converting stacks to chunks.
 """
 
 import math
+from collections.abc import Callable
 from os import PathLike
 from pathlib import Path
 
 import numpy as np
+import numpy.typing as npt
+import scipy.stats
 import zarr
 import zarr.storage
 from dask.array.core import Array
@@ -323,7 +326,13 @@ class MultiScaleGroup:
         blosc.use_threads = blosc_use_threads
         logger.info("Finished full resolution copy to zarr.")
 
-    def add_downsample_level(self, level: int, *, n_processes: int = 1) -> None:
+    def add_downsample_level(
+        self,
+        level: int,
+        *,
+        n_processes: int = 1,
+        downsample_func: Callable[[npt.ArrayLike], npt.NDArray] = np.mean,
+    ) -> None:
         """
         Add a level of downsampling.
 
@@ -337,6 +346,10 @@ class MultiScaleGroup:
             joblib.Parallel documentation for more info of allowed values.
             Running with one process (the default) will use about 5/8 the amount of
             memory of a single slab/shard.
+        downsample_func :
+            Function used to downsample data. It can be helpful to set this
+            to `stack_to_chunk.mode` for label data to calculate the most common label
+            when downsampling.
 
         Notes
         -----
@@ -394,8 +407,17 @@ class MultiScaleGroup:
             for z in range(0, sink_arr.shape[2], sink_arr.shards[2])
         ]
 
-        all_args: list[tuple[Path, Path, tuple[int, int, int]]] = [
-            (self._path / str(level_minus_one), self._path / level_str, idxs)
+        all_args: list[
+            tuple[
+                Path, Path, tuple[int, int, int], Callable[[npt.ArrayLike], npt.NDArray]
+            ]
+        ] = [
+            (
+                self._path / str(level_minus_one),
+                self._path / level_str,
+                idxs,
+                downsample_func,
+            )
             for idxs in block_indices
         ]
 
@@ -472,3 +494,10 @@ def open_multiscale_group(path: Path) -> MultiScaleGroup:
     return MultiScaleGroup(
         path, name=name, voxel_size=voxel_size, spatial_unit=spatial_unit
     )
+
+
+def mode(arr: npt.ArrayLike, axis: int) -> npt.NDArray:
+    """
+    Get the modal value of an array.
+    """
+    return scipy.stats.mode(arr, axis=axis)[0]
