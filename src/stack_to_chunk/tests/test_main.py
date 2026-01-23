@@ -2,11 +2,13 @@
 
 import json
 import re
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 import dask.array as da
 import numpy as np
+import numpy.typing as npt
 import ome_zarr_models.v05
 import pytest
 import zarr
@@ -15,10 +17,11 @@ from pydantic_zarr.v3 import ArraySpec, NamedConfig
 
 from stack_to_chunk import (
     MultiScaleGroup,
+    memory_per_downsample_process,
     memory_per_slab_process,
+    mode,
     open_multiscale_group,
 )
-from stack_to_chunk.main import memory_per_downsample_process
 
 
 def check_zattrs(zarr_path: Path, expected: dict[str, Any]) -> None:
@@ -396,6 +399,38 @@ def test_known_data(tmp_path: Path) -> None:
     group.add_downsample_level(1, n_processes=1)
     arr_downsammpled = group[1]
     np.testing.assert_equal(arr_downsammpled[:], [[[3]]])
+
+
+@pytest.mark.parametrize(
+    ("downsample_func", "expected_value"), [(mode, 7), (np.mean, 6)]
+)
+def test_mode_downsample(
+    tmp_path: Path,
+    downsample_func: Callable[[npt.ArrayLike], npt.NDArray],
+    expected_value: float,
+) -> None:
+    arr_npy = np.arange(8).reshape((2, 2, 2)).astype(np.uint8)
+    arr_npy[0] = 7  # Make sure there's two elements with 8 so the mode is well defined
+    arr = da.from_array(arr_npy)
+    arr = arr.rechunk(chunks=(2, 2, 1))
+
+    group = MultiScaleGroup(
+        tmp_path / "group.ome.zarr",
+        name="my_zarr_group",
+        spatial_unit="centimeter",
+        voxel_size=(3, 4, 5),
+        array_spec=ArraySpec.from_array(
+            arr,
+            chunk_grid=NamedConfig(
+                name="regular",
+                configuration={"chunk_shape": [1, 1, 1]},
+            ),
+        ),
+    )
+    group.add_full_res_data(arr, n_processes=1)
+    group.add_downsample_level(1, n_processes=1, downsample_func=downsample_func)
+    arr_downsammpled = group[1]
+    np.testing.assert_equal(arr_downsammpled[:], [[[expected_value]]])
 
 
 def test_padding(tmp_path: Path) -> None:

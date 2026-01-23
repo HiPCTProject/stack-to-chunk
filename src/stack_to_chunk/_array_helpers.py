@@ -1,7 +1,9 @@
+from collections.abc import Callable
 from pathlib import Path
 
 import dask.array as da
 import numpy as np
+import numpy.typing as npt
 import skimage.measure
 import tensorstore as ts
 from joblib import delayed
@@ -38,7 +40,10 @@ def _copy_slab(arr_path: Path, slab: da.Array, zstart: int, zend: int) -> None:
 
 @delayed  # type: ignore[misc]
 def _downsample_block(
-    arr_in_path: Path, arr_out_path: Path, block_idx: tuple[int, int, int]
+    arr_in_path: Path,
+    arr_out_path: Path,
+    block_idx: tuple[int, int, int],
+    downsample_func: Callable[[npt.ArrayLike], npt.NDArray] = np.mean,
 ) -> None:
     """
     Copy a single block from one array to the next, downsampling by a factor of two.
@@ -55,6 +60,8 @@ def _downsample_block(
         Path to output array. Must have the same chunk shape as `arr_in`.
     block_idx :
         Index of block to copy. Must be a multiple of the shard shape in `arr_out`.
+    downsample_func :
+        Function to use to downsample blocks of data.
 
     """
     arr_in = _open_with_tensorstore(arr_in_path)
@@ -83,9 +90,9 @@ def _downsample_block(
     pads = np.array(data.shape) % 2
     pad_width = [(0, p) for p in pads]
     data = np.pad(data, pad_width, mode="edge")
-    data = skimage.measure.block_reduce(data, block_size=2, func=np.mean).astype(
-        data.dtype
-    )
+    data = skimage.measure.block_reduce(
+        data, block_size=2, func=downsample_func
+    ).astype(data.dtype)
 
     out_slice = (
         slice(block_idx[0], min((block_idx[0] + shard_shape[0]), arr_out.shape[0])),
