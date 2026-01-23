@@ -14,15 +14,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-      include:
-        - python-version: "3.11"
-          os: ubuntu-latest
-        - python-version: "3.12"
-          os: windows-latest
-        - python-version: "3.13"
-          os: ubuntu-latest
-        - python-version: "3.14"
-          os: ubuntu-latest
+        include:
+          - python-version: "3.11"
+            os: ubuntu-latest
+          - python-version: "3.12"
+            os: windows-latest
+          - python-version: "3.13"
+            os: ubuntu-latest
+          - python-version: "3.14"
+            os: ubuntu-latest
 
     steps:
       - name: Checkout source
