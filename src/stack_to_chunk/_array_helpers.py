@@ -27,7 +27,7 @@ def _copy_slab(arr_path: Path, slab: da.Array, zstart: int, zend: int) -> None:
     data = np.empty(slab.shape, dtype=slab.dtype)
     for i in range(slab.shape[2]):
         logger.info(f"Reading z={zstart + i}")
-        data[:, :, i] = np.array(slab[:, :, i])
+        data[:, :, i] = np.array(slab[:, :, i], dtype=slab.dtype)
 
     logger.info(f"Writing z={zstart} -> {zend - 1}")
     # Write out data
