@@ -4,6 +4,18 @@ Tutorial
 
 This page steps through going from a set of 2D image files to a
 3D chunked zarr dataset.
+
+To get this tutorial running, you will need to install the following packages:
+- `stack-to-chunk`
+- `matplotlib`
+- `skimage`
+- `tifffile`
+- `zarr`
+- `loguru`
+
+If you use the Jupyter notebook, you will also need:
+- pip
+- ipykernel
 """
 
 import pathlib
