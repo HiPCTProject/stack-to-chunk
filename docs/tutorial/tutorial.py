@@ -10,7 +10,7 @@ import pathlib
 import sys
 import tempfile
 
-import dask_image.imread
+from dask.array.image import imread
 import matplotlib.pyplot as plt
 import skimage.color
 import skimage.data
@@ -49,10 +49,10 @@ plt.imshow(data_2d, cmap="gray")
 # This also makes stack-to-chunk flexible - as long as you can put your 2D images into
 # a 3D dask array, they can be used with stack-to-chunk.
 #
-# For this tutorial, ``dask_image`` provides a convenient way for us to read in all our
+# For this tutorial, ``dask.array.image.imread`` provides a convenient way for us to read in all our
 # TIFF files:
 
-images = dask_image.imread.imread(str(slice_dir / "*.tif")).T
+images = imread(str(slice_dir / "*.tif")).T
 print(images)
 
 # %%
