@@ -4,6 +4,8 @@ Tutorial
 
 This page steps through going from a set of 2D image files to a
 3D chunked zarr dataset.
+
+To get this tutorial running, you will need to install `stack-to-chunk, matplotlib, skimage, tifffile`.
 """
 
 import pathlib
