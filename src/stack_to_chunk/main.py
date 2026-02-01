@@ -229,7 +229,7 @@ class MultiScaleGroup:
         Level 0 corresponds to full resolution data, and level ``i`` to
         data downsampled by a factor of ``2**i``.
         """
-        return sorted(int(k) for k in self._group.group_keys())
+        return sorted(int(k) for k in self._group.array_keys())
 
     @property
     def chunk_size_z(self) -> int:
@@ -271,12 +271,6 @@ class MultiScaleGroup:
             z-index at which this stack of input data starts. Can be useful to write
             multiple slabs in parallel using a compute cluster where the job wants
             to be split into many small individual Python processes.
-
-        Notes
-        -----
-        Make sure create_initial_dataset has been run first to set up the
-        zarr dataset.
-
         """
         assert data.ndim == 3, "Input array is not 3-dimensional"
         if start_z_idx % self.chunk_size_z != 0:
