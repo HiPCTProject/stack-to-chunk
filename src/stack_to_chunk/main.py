@@ -213,7 +213,7 @@ class MultiScaleGroup:
 
     @property
     def _full_res_array(self) -> zarr.Array:
-        if "0" not in self._group:
+        if 0 not in self.levels:
             msg = (
                 "Full resolution dataset not present. "
                 "Run `create_initial_datset()` first."
@@ -229,7 +229,7 @@ class MultiScaleGroup:
         Level 0 corresponds to full resolution data, and level ``i`` to
         data downsampled by a factor of ``2**i``.
         """
-        return sorted(int(k) for k in self._group)
+        return sorted(int(k) for k in self._group.group_keys())
 
     @property
     def chunk_size_z(self) -> int:
@@ -365,18 +365,17 @@ class MultiScaleGroup:
             msg = "level must be an integer >= 1"
             raise ValueError(msg)
 
-        level_str = str(int(level))
-        if level_str in self._group:
-            msg = f"Level {level_str} already found in zarr group"
+        if level in self.levels:
+            msg = f"Level {level} already found in zarr group"
             raise RuntimeError(msg)
 
-        if (level_minus_one := str(int(level) - 1)) not in self._group:
-            msg = f"Level below (level={level_minus_one}) not present in group."
+        if level - 1 not in self.levels:
+            msg = f"Level below (level={level - 1}) not present in group."
             raise RuntimeError(
                 msg,
             )
 
-        source_arr: zarr.Array = self._group[level_minus_one]
+        source_arr: zarr.Array = self._group[str(level - 1)]
         source_chunk_shape = source_arr.chunks
 
         new_shape = tuple(math.ceil(i / 2) for i in source_arr.shape)
@@ -389,7 +388,7 @@ class MultiScaleGroup:
         )
 
         sink_arr = self._group.create_array(
-            name=level_str,
+            name=str(level),
             shape=new_shape,
             shards=new_shard_shape,
             chunks=source_arr.chunks,
@@ -413,15 +412,15 @@ class MultiScaleGroup:
             ]
         ] = [
             (
-                self._path / str(level_minus_one),
-                self._path / level_str,
+                self._path / str(level - 1),
+                self._path / str(level),
                 idxs,
                 downsample_func,
             )
             for idxs in block_indices
         ]
 
-        logger.info(f"Starting downsampling from level {level_minus_one} > {level}...")
+        logger.info(f"Starting downsampling from level {level - 1} > {level}...")
         blosc_use_threads = blosc.use_threads
         blosc.use_threads = 0
 
@@ -431,7 +430,7 @@ class MultiScaleGroup:
 
         self._add_level_metadata(level)
         blosc.use_threads = blosc_use_threads
-        logger.info(f"Finished downsampling from level {level_minus_one} > {level}")
+        logger.info(f"Finished downsampling from level {level - 1} > {level}")
 
     def _add_level_metadata(self, level: int = 0) -> None:
         """
