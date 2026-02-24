@@ -30,7 +30,7 @@ dependencies = [
     "zarr==3.1.1",
     "numcodecs==0.15.1",
     "tensorstore==0.1.81",
-    "scipy==1.17.0"
+    "scipy==1.17.1"
 ]
 
 optional-dependencies = { dev = [
