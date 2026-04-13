@@ -1,6 +1,6 @@
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=64", "setuptools_scm>=8"]
+requires = ["setuptools>=80", "setuptools_scm>=8"]
 
 [project]
 name = "stack_to_chunk"
@@ -32,7 +32,9 @@ dependencies = [
     "zarr==3.1.1",
     "numcodecs==0.15.1",
     "tensorstore==0.1.81",
-    "scipy==1.17.0"
+    "scipy==1.17.0",
+     # Not a direct dependency, but lower versions fail to build
+    "slicerator>=1"
 ]
 
 optional-dependencies = { docs = [
