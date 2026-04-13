@@ -54,7 +54,7 @@ run = { branch = true, parallel = true, source = ["stack_to_chunk"] }
 paths.source = ["src"]
 
 [tool.pytest.ini_options]
-addopts = ["--color=yes", "--cov", "--strict-config", "--strict-markers", "-vv"]
+addopts = ["--color=yes", "--cov", "--cov-report=xml", "--strict-config", "--strict-markers", "-vv"]
 log_cli_level = "INFO"
 minversion = 6
 testpaths = ["src/stack_to_chunk/tests"]
