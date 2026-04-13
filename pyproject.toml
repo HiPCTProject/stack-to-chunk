@@ -30,11 +30,12 @@ dependencies = [
     "pydantic-zarr==0.9.1",
     "scikit-image==0.26.0",
     "zarr==3.1.1",
-    "numcodecs==0.15.1",
+    "numcodecs==0.16.5",
     "tensorstore==0.1.81",
     "scipy==1.17.0",
-     # Not a direct dependency, but lower versions fail to build
-    "slicerator>=1"
+     # Not direct dependencies, but lower versions fail to build
+    "slicerator>=1",
+    "fsspec>=2023"
 ]
 
 optional-dependencies = { docs = [
@@ -75,6 +76,6 @@ overrides."tool.coverage.paths.source".inline_arrays = false
 [dependency-groups]
 dev = [
     "prek>=0.3.9",
-    "pytest-cov>=5.0.0",
-    "pytest>=8.3.2",
+    "pytest-cov==7.1.0",
+    "pytest==9.0.3",
 ]
