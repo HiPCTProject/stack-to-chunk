@@ -7,7 +7,7 @@ name = "stack_to_chunk"
 dynamic = ["version"]
 description = "Convert stacks of images to OME-Zarr"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 license = { file = "LICENSE.md" }
 
 
@@ -16,7 +16,6 @@ classifiers = [
     "Operating System :: POSIX",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
@@ -37,13 +36,13 @@ dependencies = [
 ]
 
 optional-dependencies = { docs = [
-    "dask-image",
-    "matplotlib",
-    "pydata-sphinx-theme",
-    "sphinx",
-    "sphinx-autoapi",
-    "sphinx-gallery",
-    "tifffile",
+    "dask-image==2025.11.0",
+    "matplotlib==3.10.8",
+    "pydata-sphinx-theme==0.17.0",
+    "sphinx==9.0.4",
+    "sphinx-autoapi==3.8.0",
+    "sphinx-gallery==0.20.0",
+    "tifffile==2026.4.11",
 ] }
 
 [project.urls]
