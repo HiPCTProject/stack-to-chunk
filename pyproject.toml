@@ -1,13 +1,13 @@
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=64", "setuptools_scm>=8"]
+requires = ["setuptools>=80", "setuptools_scm>=8"]
 
 [project]
 name = "stack_to_chunk"
 dynamic = ["version"]
 description = "Convert stacks of images to OME-Zarr"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 license = { file = "LICENSE.md" }
 
 
@@ -16,7 +16,6 @@ classifiers = [
     "Operating System :: POSIX",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
@@ -31,19 +30,22 @@ dependencies = [
     "pydantic-zarr==0.9.1",
     "scikit-image==0.26.0",
     "zarr==3.1.1",
-    "numcodecs==0.15.1",
+    "numcodecs==0.16.5",
     "tensorstore==0.1.81",
-    "scipy==1.17.0"
+    "scipy==1.17.0",
+     # Not direct dependencies, but lower versions fail to build
+    "slicerator>=1",
+    "fsspec>=2023"
 ]
 
 optional-dependencies = { docs = [
-    "dask-image",
-    "matplotlib",
-    "pydata-sphinx-theme",
-    "sphinx",
-    "sphinx-autoapi",
-    "sphinx-gallery",
-    "tifffile",
+    "dask-image==2025.11.0",
+    "matplotlib==3.10.8",
+    "pydata-sphinx-theme==0.17.0",
+    "sphinx==9.0.4",
+    "sphinx-autoapi==3.8.0",
+    "sphinx-gallery==0.20.0",
+    "tifffile==2026.4.11",
 ] }
 
 [project.urls]
@@ -73,7 +75,7 @@ overrides."tool.coverage.paths.source".inline_arrays = false
 
 [dependency-groups]
 dev = [
-    "pre-commit>=3.8.0",
-    "pytest-cov>=5.0.0",
-    "pytest>=8.3.2",
+    "prek>=0.3.9",
+    "pytest-cov==7.1.0",
+    "pytest==9.0.3",
 ]
