@@ -271,6 +271,7 @@ class MultiScaleGroup:
             z-index at which this stack of input data starts. Can be useful to write
             multiple slabs in parallel using a compute cluster where the job wants
             to be split into many small individual Python processes.
+
         """
         assert data.ndim == 3, "Input array is not 3-dimensional"
         if start_z_idx % self.chunk_size_z != 0:

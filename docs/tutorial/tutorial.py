@@ -12,12 +12,12 @@ import pathlib
 import sys
 import tempfile
 
-from dask.array.image import imread
 import matplotlib.pyplot as plt
 import skimage.color
 import skimage.data
 import tifffile
 import zarr
+from dask.array.image import imread
 from loguru import logger
 from pydantic_zarr.v3 import ArraySpec
 
