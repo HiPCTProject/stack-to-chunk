@@ -11,12 +11,15 @@ requires-python = ">=3.11"
 license = { file = "LICENSE.md" }
 
 
-authors = [{ email = "d.stansby@ucl.ac.uk", name = "HiP-CT Project" }]
+authors = [{ email = "d.stansby@ucl.ac.uk", name = "David Stansby" }]
 classifiers = [
     "Operating System :: POSIX",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Typing :: Typed",
 ]
 dependencies = [
@@ -33,10 +36,7 @@ dependencies = [
     "scipy==1.17.0"
 ]
 
-optional-dependencies = { dev = [
-    "pre-commit",
-    "tox>=4",
-], docs = [
+optional-dependencies = { docs = [
     "dask-image",
     "matplotlib",
     "pydata-sphinx-theme",
@@ -54,7 +54,7 @@ run = { branch = true, parallel = true, source = ["stack_to_chunk"] }
 paths.source = ["src"]
 
 [tool.pytest.ini_options]
-addopts = ["--color=yes", "--cov", "--strict-config", "--strict-markers", "-vv"]
+addopts = ["--color=yes", "--cov", "--cov-report=xml", "--strict-config", "--strict-markers", "-vv"]
 log_cli_level = "INFO"
 minversion = 6
 testpaths = ["src/stack_to_chunk/tests"]
@@ -72,4 +72,8 @@ overrides."project.classifiers".inline_arrays = false
 overrides."tool.coverage.paths.source".inline_arrays = false
 
 [dependency-groups]
-dev = ["pre-commit>=3.8.0", "pytest-cov>=5.0.0", "pytest>=8.3.2"]
+dev = [
+    "pre-commit>=3.8.0",
+    "pytest-cov>=5.0.0",
+    "pytest>=8.3.2",
+]
