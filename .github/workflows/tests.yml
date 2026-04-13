@@ -35,7 +35,12 @@ jobs:
           enable-cache: true
 
       - name: Install stack-to-chunk
+        if: ${{ matrix.python-version != '3.11' }}
         run: uv sync --dev
+
+      - name: Install stack-to-chunk with lowest dependencies
+        if: ${{ matrix.python-version == '3.11' }}
+        run: uv sync --dev --resolution lowest
 
       - name: Run tests
         run: uv run pytest
