@@ -327,6 +327,7 @@ class MultiScaleGroup:
         *,
         n_processes: int = 1,
         downsample_func: Callable[[npt.ArrayLike], npt.NDArray] = np.mean,
+        overwrite: bool = False,
     ) -> None:
         """
         Add a level of downsampling.
@@ -345,6 +346,9 @@ class MultiScaleGroup:
             Function used to downsample data. It can be helpful to set this
             to `stack_to_chunk.mode` for label data to calculate the most common label
             when downsampling.
+        overwrite :
+            Set to `True` to not error if the Zarr group already exists,
+            and overwrite any data and metadata in any existing Zarr group.
 
         Notes
         -----
@@ -360,7 +364,7 @@ class MultiScaleGroup:
             msg = "level must be an integer >= 1"
             raise ValueError(msg)
 
-        if level in self.levels:
+        if level in self.levels and not overwrite:
             msg = f"Level {level} already found in zarr group"
             raise RuntimeError(msg)
 
@@ -390,6 +394,7 @@ class MultiScaleGroup:
             dtype=source_arr.dtype,
             compressors=source_arr.compressors,
             dimension_names=source_arr.metadata.dimension_names,
+            overwrite=overwrite,
         )
         assert sink_arr.shards is not None
 
