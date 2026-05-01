@@ -78,7 +78,6 @@ def check_full_res_copy(zarr_path: Path, group: zarr.Group, arr: da.Array) -> No
                 }
             },
             "zarr_format": 3,
-            "consolidated_metadata": None,
             "node_type": "group",
         },
     )
@@ -156,7 +155,6 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
                 }
             },
             "zarr_format": 3,
-            "consolidated_metadata": None,
             "node_type": "group",
         },
     )
@@ -278,7 +276,6 @@ def test_workflow(tmp_path: Path, arr: da.Array) -> None:
                 ],
             },
             "zarr_format": 3,
-            "consolidated_metadata": None,
             "node_type": "group",
         },
     )
