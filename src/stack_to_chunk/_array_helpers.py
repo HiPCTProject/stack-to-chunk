@@ -1,3 +1,6 @@
+import ctypes
+import ctypes.util
+import gc
 from collections.abc import Callable
 from pathlib import Path
 
@@ -8,6 +11,28 @@ import skimage.measure
 import tensorstore as ts
 from joblib import delayed
 from loguru import logger
+
+
+def _release_memory() -> None:
+    """
+    Return freed memory to the operating system.
+
+    Large transient numpy and tensorstore buffers are freed at the Python level
+    when a slab-processing function returns, but with the glibc allocator the pages
+    are retained in the process arena rather than handed back to the OS. Without
+    this, resident memory ratchets up slab-by-slab. ``malloc_trim`` is glibc-only,
+    so it is guarded and becomes a no-op elsewhere.
+    """
+    gc.collect()
+    libc_name = ctypes.util.find_library("c")
+    if libc_name is None:
+        return
+    try:
+        libc = ctypes.CDLL(libc_name)
+        malloc_trim = libc.malloc_trim
+    except (OSError, AttributeError):
+        return
+    malloc_trim(0)
 
 
 @delayed  # type: ignore[misc]
@@ -36,6 +61,11 @@ def _copy_slab(arr_path: Path, slab: da.Array, zstart: int, zend: int) -> None:
     arr_zarr = _open_with_tensorstore(arr_path)
     arr_zarr[:, :, zstart:zend].write(data).result()
     logger.info(f"Finished copying z={zstart} -> {zend - 1}")
+
+    # Hand the slab buffer back to the OS before returning so resident memory
+    # does not ratchet up slab-by-slab.
+    del data, arr_zarr
+    _release_memory()
 
 
 @delayed  # type: ignore[misc]
@@ -101,6 +131,10 @@ def _downsample_block(
     )
     arr_out[out_slice].write(data).result()
 
+    # Hand the block/shard buffers back to the OS before returning.
+    del data, arr_in, arr_out
+    _release_memory()
+
 
 def _open_with_tensorstore(arr_path: Path) -> ts.TensorStore:
     return ts.open(
@@ -111,5 +145,9 @@ def _open_with_tensorstore(arr_path: Path) -> ts.TensorStore:
                 "path": str(arr_path),
             },
             "open": True,
+            # Bound the read cache so repeated opens (e.g. in the downsample read
+            # path) cannot grow an unbounded in-memory cache.
+            "cache_pool": {"total_bytes_limit": 100_000_000},
+            "recheck_cached_data": "open",
         }
     ).result()
