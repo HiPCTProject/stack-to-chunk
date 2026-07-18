@@ -24,6 +24,18 @@ Third-party multi-threading
 This allows the ``n_processes`` argument to be respected when set to ``1``, and
 prevents issues when ``stack_to_chunk`` uses a larger number of parallel processes.
 
+Memory usage
+------------
+Each parallel process holds roughly one slab/shard of data in memory at a time, so
+peak memory is approximately ``n_processes`` times
+:func:`stack_to_chunk.memory_per_slab_process` (a lower bound on the per-process
+size). On a memory-capped machine, choose ``n_processes`` so that this product
+stays within the available memory.
+
+``stack-to-chunk`` releases each slab's buffers back to the operating system as it
+finishes (via ``malloc_trim`` on glibc systems), so resident memory should plateau
+across slabs rather than climb.
+
 Zarr group layout
 -----------------
 The zarr groups produced by ``stack-to-chunk`` contain zarr arrays that are labelled 0, 1, 2, 3... etc.

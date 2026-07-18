@@ -272,6 +272,13 @@ class MultiScaleGroup:
             multiple slabs in parallel using a compute cluster where the job wants
             to be split into many small individual Python processes.
 
+        Notes
+        -----
+        Peak memory is approximately ``n_processes`` times
+        :func:`memory_per_slab_process` (a lower bound on the per-process size).
+        On a memory-capped machine, choose ``n_processes`` so that this product
+        stays within the available memory.
+
         """
         assert data.ndim == 3, "Input array is not 3-dimensional"
         if start_z_idx % self.chunk_size_z != 0:
@@ -301,21 +308,22 @@ class MultiScaleGroup:
         slab_idxs: list[tuple[int, int]] = [
             (z, min(z + self.chunk_size_z, nz)) for z in range(0, nz, self.chunk_size_z)
         ]
-        all_args = [
-            (
+
+        logger.info("Starting full resolution copy to zarr...")
+        blosc_use_threads = blosc.use_threads
+        blosc.use_threads = 0
+
+        # Build jobs lazily so each slab's dask view is created and released
+        # incrementally rather than all being pinned for the whole call.
+        jobs = (
+            _copy_slab(
                 self._path / "0",
                 data[:, :, zmin:zmax],
                 zmin + start_z_idx,
                 zmax + start_z_idx,
             )
             for (zmin, zmax) in slab_idxs
-        ]
-
-        logger.info("Starting full resolution copy to zarr...")
-        blosc_use_threads = blosc.use_threads
-        blosc.use_threads = 0
-
-        jobs = [_copy_slab(*args) for args in all_args]
+        )
         Parallel(n_jobs=n_processes)(jobs)
 
         blosc.use_threads = blosc_use_threads
@@ -356,7 +364,8 @@ class MultiScaleGroup:
         added.
 
         Running this with one process will use about 5/8 the amount of memory of a
-        single slab/shard.
+        single slab/shard. Peak memory scales with ``n_processes``, so on a
+        memory-capped machine choose ``n_processes`` accordingly.
 
         """
         logger.info(f"Downsampling to level {level} with {n_processes=}")
@@ -406,26 +415,22 @@ class MultiScaleGroup:
             for z in range(0, sink_arr.shape[2], sink_arr.shards[2])
         ]
 
-        all_args: list[
-            tuple[
-                Path, Path, tuple[int, int, int], Callable[[npt.ArrayLike], npt.NDArray]
-            ]
-        ] = [
-            (
+        logger.info(f"Starting downsampling from level {level - 1} > {level}...")
+        blosc_use_threads = blosc.use_threads
+        blosc.use_threads = 0
+
+        # Build jobs lazily so each block's task is created and released
+        # incrementally rather than all being pinned for the whole call.
+        jobs = (
+            _downsample_block(
                 self._path / str(level - 1),
                 self._path / str(level),
                 idxs,
                 downsample_func,
             )
             for idxs in block_indices
-        ]
-
-        logger.info(f"Starting downsampling from level {level - 1} > {level}...")
-        blosc_use_threads = blosc.use_threads
-        blosc.use_threads = 0
-
-        jobs = [_downsample_block(*args) for args in all_args]
-        logger.info(f"Launching {len(jobs)} jobs")
+        )
+        logger.info(f"Launching {len(block_indices)} jobs")
         Parallel(n_jobs=n_processes, verbose=10)(jobs)
 
         self._add_level_metadata(level)
